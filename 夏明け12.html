@@ -2,30 +2,41 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>空間図形 解説アニメーション</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>空間図形 解説アニメーション - 夏明け12</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Three.js & Plugins -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
-    <!-- Removed QuickHull and ConvexGeometry as we will build custom geometries -->
     <!-- GSAP for Animations -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
 </head>
 <body class="bg-white text-slate-800 font-sans h-screen overflow-hidden">
+
+    <!-- 画面固定 TOPへ戻るボタン (Safari/Mobile対応) -->
+    <a href="index.html" class="fixed top-3 left-3 z-50 inline-flex items-center gap-1.5 bg-white/95 hover:bg-white text-slate-800 hover:text-blue-600 px-3.5 py-2 rounded-xl shadow-lg border border-slate-200/90 backdrop-blur-md text-xs sm:text-sm font-bold transition-all active:scale-95">
+        <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/></svg>
+        <span>TOP一覧へ戻る</span>
+    </a>
+
     <div class="flex flex-col md:flex-row h-full w-full">
         <!-- 3D Canvas Area -->
         <div id="canvas-container" class="w-full md:w-2/3 h-1/2 md:h-full relative bg-slate-50 border-b md:border-b-0 md:border-r border-slate-200">
-            <div class="absolute top-4 left-4 bg-white/90 backdrop-blur px-3 py-2 rounded-lg shadow-sm text-xs md:text-sm font-medium text-slate-600 pointer-events-none z-10">
-                <p>🖱️ マウス/スワイプで視点移動</p>
-                <p>🔍 スクロールで拡大縮小</p>
+            <!-- 視点操作ヒント（右上配置で戻るボタンと干渉防止） -->
+            <div class="absolute top-3 right-3 bg-white/90 backdrop-blur px-3 py-2 rounded-lg shadow-sm text-xs font-medium text-slate-600 pointer-events-none z-10">
+                <p>🖱️ ドラッグで視点移動</p>
+                <p>🔍 スクロール/ピンチで拡大縮小</p>
             </div>
         </div>
         
         <!-- Sidebar Area -->
         <div class="w-full md:w-1/3 h-1/2 md:h-full flex flex-col bg-white">
             <div class="p-6 md:p-8 flex-1 overflow-y-auto">
+                <div class="flex items-center gap-2 mb-2">
+                    <span class="px-2.5 py-0.5 bg-blue-100 text-blue-700 text-xs font-bold rounded-md">夏明け No.12</span>
+                    <span class="text-xs text-slate-400 font-medium">洗足学園 数学</span>
+                </div>
                 <h1 class="text-2xl font-extrabold text-slate-900 mb-6 tracking-tight">立体の体積 解説</h1>
                 
                 <div class="space-y-6">
