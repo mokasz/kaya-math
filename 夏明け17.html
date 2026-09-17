@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>空間図形（球の軌跡）解説アニメーション</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    
+    <!-- 数式表示用のMathJax -->
+    <script>
+        window.MathJax = {
+            tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] },
+            svg: { fontCache: 'global' }
+        };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    
+    <style>
+        body { margin: 0; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        #canvas-container { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; }
+        .glass-panel { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+        
+        /* スライダーのスタイル */
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            background: transparent;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 16px;
+            width: 16px;
+            border-radius: 50%;
+            background: #3b82f6;
+            cursor: pointer;
+            margin-top: -6px;
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            background: #cbd5e1;
+            border-radius: 2px;
+        }
+        input[type=range]:disabled::-webkit-slider-thumb {
+            background: #94a3b8;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+    <div id="canvas-container"></div>
+    
+    <!-- 球のコントロールパネル (左上) -->
+    <div class="absolute top-4 left-4 glass-panel rounded-xl shadow-lg p-4 z-10 text-gray-800 border border-white/40 w-72">
+        <div class="flex justify-between items-center mb-3">
+            <h3 class="font-bold text-sm">球のコントロール</h3>
+            <button id="toggle-anim-btn" class="px-3 py-1 bg-blue-100 text-blue-700 text-xs rounded-lg hover:bg-blue-200 transition-colors font-semibold">
+                自動移動: ON
+            </button>
+        </div>
+        
+        <div class="space-y-3 text-sm" id="sliders-container">
+            <!-- X軸スライダー -->
+            <div class="flex items-center gap-3 opacity-50 transition-opacity duration-300" id="slider-row-x">
+                <span class="w-4 font-mono font-bold text-gray-500">X</span>
+                <input type="range" id="slider-x" min="-2" max="2" step="0.1" value="2" disabled>
+            </div>
+            <!-- Y軸スライダー -->
+            <div class="flex items-center gap-3 opacity-50 transition-opacity duration-300" id="slider-row-y">
+                <span class="w-4 font-mono font-bold text-gray-500">Y</span>
+                <input type="range" id="slider-y" min="-2" max="2" step="0.1" value="-2" disabled>
+            </div>
+            <!-- Z軸スライダー -->
+            <div class="flex items-center gap-3 opacity-50 transition-opacity duration-300" id="slider-row-z">
+                <span class="w-4 font-mono font-bold text-gray-500">Z</span>
+                <input type="range" id="slider-z" min="-2" max="2" step="0.1" value="2" disabled>
+            </div>
+            <p class="text-xs text-gray-400 mt-2 leading-tight">
+                ※ 自動移動をOFFにすると、スライダーで手動操作できます。
+            </p>
+        </div>
+    </div>
+
+    <!-- 解説UIパネル -->
+    <div class="absolute bottom-4 left-4 right-4 md:bottom-8 md:left-8 md:right-auto md:w-[450px] glass-panel rounded-2xl shadow-2xl p-6 z-10 text-gray-800 border border-white/40 transition-all duration-300">
+        <div class="flex items-center gap-2 mb-3">
+            <div class="w-2 h-6 bg-blue-500 rounded-full"></div>
+            <h2 id="step-title" class="text-xl font-bold">問題の状況</h2>
+        </div>
+        <div id="step-content" class="text-[15px] leading-relaxed mb-6 min-h-[140px] text-gray-700">
+            <!-- コンテンツがJSから挿入されます -->
+        </div>
+        <div class="flex justify-between items-center border-t border-gray-200 pt-4">
+            <button id="prev-btn" class="px-5 py-2.5 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed font-medium transition-colors">
+                &larr; 前へ
+            </button>
+            <span id="step-indicator" class="text-sm font-bold text-gray-400 tracking-widest">
+                1 / 5
+            </span>
+            <button id="next-btn" class="px-5 py-2.5 bg-blue-500 text-white rounded-xl hover:bg-blue-600 shadow-lg shadow-blue-500/30 disabled:opacity-40 disabled:cursor-not-allowed font-medium transition-all">
+                次へ &rarr;
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // Three.js シーンのセットアップ
+        // ==========================================
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xf4f6f9);
+
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+        camera.position.set(7, 6, 9);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        container.appendChild(renderer.domElement);
+
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+
+        // ライティング
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+        scene.add(ambientLight);
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.6);
+        dirLight.position.set(10, 20, 15);
+        scene.add(dirLight);
+
+        // ==========================================
+        // オブジェクトの構築
+        // ==========================================
+        // マテリアル定義 (透明度は depthWrite を false にして描画の破綻を防ぐ)
+        const matWire = new THREE.LineBasicMaterial({ color: 0x94a3b8, transparent: true, opacity: 0.5 });
+        const matEdgeFrame = new THREE.LineBasicMaterial({ color: 0x334155, linewidth: 2 });
+        const matSphere = new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.4, metalness: 0.1 });
+        
+        const matRed = new THREE.MeshStandardMaterial({ color: 0xef4444, transparent: true, opacity: 0.5, depthWrite: false });
+        const matBlue = new THREE.MeshStandardMaterial({ color: 0x3b82f6, transparent: true, opacity: 0.5, depthWrite: false });
+        const matGreen = new THREE.MeshStandardMaterial({ color: 0x10b981, transparent: true, opacity: 0.6, depthWrite: false });
+        const matGhost = new THREE.MeshStandardMaterial({ color: 0xffffff, transparent: true, opacity: 0.6, depthWrite: false });
+
+        // 1. 全体フレーム (6x6x6 の立方体)
+        const frameGeo = new THREE.EdgesGeometry(new THREE.BoxGeometry(6, 6, 6));
+        const frame = new THREE.LineSegments(frameGeo, matEdgeFrame);
+        scene.add(frame);
+        
+        // 補助のグリッドライン（見た目を良くするため）
+        const gridGeo = new THREE.EdgesGeometry(new THREE.BoxGeometry(6, 6, 6), 1);
+        const grid = new THREE.LineSegments(gridGeo, matWire);
+        scene.add(grid);
+
+        // 2. メインの動く球 (半径1)
+        const mainSphere = new THREE.Mesh(new THREE.SphereGeometry(1, 64, 64), matSphere);
+        mainSphere.position.set(2, -2, 2);
+        scene.add(mainSphere);
+
+        // 3. 中央の到達不能領域 (赤: 2x2x2)
+        const centerBox = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2), matRed);
+        centerBox.visible = false;
+        scene.add(centerBox);
+
+        // 4. 辺の隙間グループ (青)
+        const edgeGroup = new THREE.Group();
+        const posEdge = [2.5, -2.5]; // 1x1x4ボックスの配置座標 (端)
+        const posInner = [2, -2];   // 内側の円柱の配置座標
+
+        function addEdgeGap(x, y, z, cx, cy, cz, type) {
+            // 隙間を示す直方体
+            const boxGeo = type === 'z' ? new THREE.BoxGeometry(1, 1, 4) :
+                           type === 'y' ? new THREE.BoxGeometry(1, 4, 1) :
+                                          new THREE.BoxGeometry(4, 1, 1);
+            const box = new THREE.Mesh(boxGeo, matBlue);
+            box.position.set(x, y, z);
+            
+            // 球が通過する軌跡（円柱）
+            const cylGeo = new THREE.CylinderGeometry(1, 1, 4, 32);
+            const cyl = new THREE.Mesh(cylGeo, matGhost);
+            cyl.position.set(cx, cy, cz);
+            if (type === 'z') cyl.rotation.x = Math.PI / 2;
+            if (type === 'x') cyl.rotation.z = Math.PI / 2;
+            
+            edgeGroup.add(box);
+            edgeGroup.add(cyl);
+        }
+
+        // 12本の辺を生成
+        for(let i=0; i<2; i++) for(let j=0; j<2; j++) addEdgeGap(posEdge[i], posEdge[j], 0, posInner[i], posInner[j], 0, 'z');
+        for(let i=0; i<2; i++) for(let j=0; j<2; j++) addEdgeGap(posEdge[i], 0, posEdge[j], posInner[i], 0, posInner[j], 'y');
+        for(let i=0; i<2; i++) for(let j=0; j<2; j++) addEdgeGap(0, posEdge[i], posEdge[j], 0, posInner[i], posInner[j], 'x');
+
+        edgeGroup.visible = false;
+        scene.add(edgeGroup);
+
+        // 5. 角の隙間グループ (緑)
+        const cornerGroup = new THREE.Group();
+        for(let i=0; i<2; i++) {
+            for(let j=0; j<2; j++) {
+                for(let k=0; k<2; k++) {
+                    // 隙間を示す立方体
+                    const box = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), matGreen);
+                    box.position.set(posEdge[i], posEdge[j], posEdge[k]);
+                    
+                    // 球が通過する限界（球）
+                    const sph = new THREE.Mesh(new THREE.SphereGeometry(1, 32, 32), matGhost);
+                    sph.position.set(posInner[i], posInner[j], posInner[k]);
+                    
+                    cornerGroup.add(box);
+                    cornerGroup.add(sph);
+                }
+            }
+        }
+        cornerGroup.visible = false;
+        scene.add(cornerGroup);
+
+        // ==========================================
+        // コントロールUIのセットアップ
+        // ==========================================
+        let isAutoAnimationEnabled = true;
+        let currentGsapTween = null;
+
+        const toggleBtn = document.getElementById('toggle-anim-btn');
+        const sliderX = document.getElementById('slider-x');
+        const sliderY = document.getElementById('slider-y');
+        const sliderZ = document.getElementById('slider-z');
+        const sliderRows = [
+            document.getElementById('slider-row-x'),
+            document.getElementById('slider-row-y'),
+            document.getElementById('slider-row-z')
+        ];
+
+        // スライダーの有効/無効切り替え
+        function updateSliderState() {
+            const disable = isAutoAnimationEnabled;
+            sliderX.disabled = disable;
+            sliderY.disabled = disable;
+            sliderZ.disabled = disable;
+            
+            sliderRows.forEach(row => {
+                row.style.opacity = disable ? '0.5' : '1';
+            });
+        }
+
+        // スライダー値の反映
+        function onSliderChange() {
+            if (isAutoAnimationEnabled) return;
+            mainSphere.position.set(
+                parseFloat(sliderX.value),
+                parseFloat(sliderY.value),
+                parseFloat(sliderZ.value)
+            );
+        }
+
+        sliderX.addEventListener('input', onSliderChange);
+        sliderY.addEventListener('input', onSliderChange);
+        sliderZ.addEventListener('input', onSliderChange);
+
+        // トグルボタンの動作
+        toggleBtn.addEventListener('click', () => {
+            isAutoAnimationEnabled = !isAutoAnimationEnabled;
+            
+            if (isAutoAnimationEnabled) {
+                toggleBtn.innerText = "自動移動: ON";
+                toggleBtn.className = "px-3 py-1 bg-blue-100 text-blue-700 text-xs rounded-lg hover:bg-blue-200 transition-colors font-semibold";
+                startSphereAnimation(); // アニメーション再開
+            } else {
+                toggleBtn.innerText = "自動移動: OFF";
+                toggleBtn.className = "px-3 py-1 bg-gray-200 text-gray-700 text-xs rounded-lg hover:bg-gray-300 transition-colors font-semibold";
+                if (currentGsapTween) {
+                    currentGsapTween.kill(); // 現在のアニメーションを強制終了
+                }
+                // 現在位置をスライダーに同期
+                sliderX.value = mainSphere.position.x;
+                sliderY.value = mainSphere.position.y;
+                sliderZ.value = mainSphere.position.z;
+            }
+            updateSliderState();
+        });
+
+        // ==========================================
+        // アニメーションロジック
+        // ==========================================
+        // 球が壁に沿ってランダムに転がり続けるアニメーション
+        function startSphereAnimation() {
+            if (!isAutoAnimationEnabled) return;
+
+            function move() {
+                if (!isAutoAnimationEnabled) return;
+
+                const axes = ['x', 'y', 'z'];
+                const pos = mainSphere.position;
+                
+                // 現在接している壁（座標が±2）を特定
+                const onWallAxes = axes.filter(a => Math.abs(pos[a]) >= 1.99);
+                
+                let axisToMove;
+                if (onWallAxes.length === 1) {
+                    // 1つの面の中央にいる場合は、面内の他の軸に移動
+                    const freeAxes = axes.filter(a => a !== onWallAxes[0]);
+                    axisToMove = freeAxes[Math.floor(Math.random() * freeAxes.length)];
+                } else {
+                    // 辺や角にいる場合は、自由に軸を選んで移動（ただし壁から離れないように）
+                    axisToMove = axes[Math.floor(Math.random() * 3)];
+                }
+                
+                // 目的地の設定
+                let targetValue;
+                if (Math.abs(pos[axisToMove] - 2) < 0.1) targetValue = -2;
+                else if (Math.abs(pos[axisToMove] + 2) < 0.1) targetValue = 2;
+                else targetValue = Math.random() > 0.5 ? 2 : -2;
+                
+                // 移動時間（距離に比例）
+                const duration = Math.abs(targetValue - pos[axisToMove]) * 0.4 + 0.5;
+                
+                currentGsapTween = gsap.to(pos, {
+                    [axisToMove]: targetValue,
+                    duration: duration,
+                    ease: "power1.inOut",
+                    onUpdate: () => {
+                        // アニメーション中もスライダーの見た目だけは更新する（無効状態だが）
+                        if(isAutoAnimationEnabled) {
+                            sliderX.value = pos.x;
+                            sliderY.value = pos.y;
+                            sliderZ.value = pos.z;
+                        }
+                    },
+                    onComplete: move
+                });
+            }
+            move();
+        }
+        startSphereAnimation();
+
+        // カメラのスムーズ移動
+        function moveCamera(targetPos, targetLookAt, duration = 1.5) {
+            gsap.to(camera.position, {
+                x: targetPos.x, y: targetPos.y, z: targetPos.z,
+                duration: duration, ease: "power2.inOut"
+            });
+            gsap.to(controls.target, {
+                x: targetLookAt.x, y: targetLookAt.y, z: targetLookAt.z,
+                duration: duration, ease: "power2.inOut",
+                onUpdate: () => controls.update()
+            });
+        }
+
+        // ==========================================
+        // 解説ステップの定義
+        // ==========================================
+        const steps = [
+            {
+                title: "問題の状況",
+                content: "一辺 $6\\text{cm}$ の立方体の中を、半径 $1\\text{cm}$ の球が面に触れながら自由に動きます。<br><br>球が通過する部分の体積を直接求めるのは難しいので、<b>全体から「球が通過しない部分」の体積を引く</b>方針で考えましょう。",
+                action: () => {
+                    centerBox.visible = false;
+                    edgeGroup.visible = false;
+                    cornerGroup.visible = false;
+                    moveCamera(new THREE.Vector3(7, 6, 9), new THREE.Vector3(0, 0, 0));
+                }
+            },
+            {
+                title: "(iii) 中央の到達できない空間",
+                content: "球は常にいずれかの壁に接しているため、立方体の中央にはどうしても届かない空間ができます。<br><br>壁から球の直径分($2\\text{cm}$)内側の領域、つまり一辺 $6 - (2+2) = 2\\text{cm}$ の立方体(赤色)がそれにあたります。<br><br>体積：$2^3 = 8 \\text{ cm}^3$",
+                action: () => {
+                    centerBox.visible = true;
+                    edgeGroup.visible = false;
+                    cornerGroup.visible = false;
+                    
+                    matRed.opacity = 0.8;
+                    moveCamera(new THREE.Vector3(6, 4, 7), new THREE.Vector3(0, 0, 0));
+                }
+            },
+            {
+                title: "(ii) 辺に沿った隙間",
+                content: "立方体の12本の辺の周りにも、球が入り込めない隙間ができます。角を除いた長さ $4\\text{cm}$ の部分です。<br><br>青い直方体から、球が通る軌跡(白い円柱)を引いた形になります。<br><br>体積：$(1^2 - \\frac{\\pi \\cdot 1^2}{4}) \\times 4 \\times 12 = 48 - 12\\pi \\text{ cm}^3$",
+                action: () => {
+                    centerBox.visible = true;
+                    matRed.opacity = 0.1; 
+                    edgeGroup.visible = true;
+                    cornerGroup.visible = false;
+                    
+                    matBlue.opacity = 0.8;
+                    // 右上手前の辺をズーム
+                    moveCamera(new THREE.Vector3(6, 6, 2), new THREE.Vector3(2.5, 2.5, 0));
+                }
+            },
+            {
+                title: "(i) 8つの角の隙間",
+                content: "最後に、8つの角(隅)にある隙間です。<br><br>緑色の直方体(一辺 $1\\text{cm}$)から、球が一番奥に入り込んだ時の領域(白い球の $\\frac{1}{8}$)を取り除いた形になります。<br><br>体積：$(1^3 - \\frac{4}{3}\\pi \\times \\frac{1}{8}) \\times 8 = 8 - \\frac{4}{3}\\pi \\text{ cm}^3$",
+                action: () => {
+                    centerBox.visible = true;
+                    matRed.opacity = 0.05;
+                    edgeGroup.visible = true;
+                    matBlue.opacity = 0.05;
+                    cornerGroup.visible = true;
+                    
+                    matGreen.opacity = 0.9;
+                    // 右上手前の角をズーム
+                    moveCamera(new THREE.Vector3(4.5, 4.5, 4.5), new THREE.Vector3(2.5, 2.5, 2.5));
+                }
+            },
+            {
+                title: "体積の合計",
+                content: "これら3つの「通過しない部分」の体積を合計すると、求める答えになります。<br><br>$(8 - \\frac{4}{3}\\pi) + (48 - 12\\pi) + 8 = 64 - \\frac{40}{3}\\pi$<br><br><b class='text-blue-600 text-lg'>答え：$64 - \\frac{40}{3}\\pi \\text{ cm}^3$</b>",
+                action: () => {
+                    centerBox.visible = true;
+                    matRed.opacity = 0.6;
+                    edgeGroup.visible = true;
+                    matBlue.opacity = 0.6;
+                    cornerGroup.visible = true;
+                    matGreen.opacity = 0.6;
+                    
+                    // 全体を俯瞰
+                    moveCamera(new THREE.Vector3(8, 7, 10), new THREE.Vector3(0, 0, 0));
+                }
+            }
+        ];
+
+        // ==========================================
+        // UIコントローラー
+        // ==========================================
+        let currentStep = 0;
+        const titleEl = document.getElementById('step-title');
+        const contentEl = document.getElementById('step-content');
+        const prevBtn = document.getElementById('prev-btn');
+        const nextBtn = document.getElementById('next-btn');
+        const indicatorEl = document.getElementById('step-indicator');
+
+        function updateStep() {
+            const step = steps[currentStep];
+            titleEl.innerHTML = step.title;
+            contentEl.innerHTML = step.content;
+            indicatorEl.innerText = `${currentStep + 1} / ${steps.length}`;
+            
+            prevBtn.disabled = currentStep === 0;
+            nextBtn.disabled = currentStep === steps.length - 1;
+            
+            // アクション（カメラ移動と表示切替）を実行
+            step.action();
+            
+            // 数式のレンダリング
+            if (window.MathJax && window.MathJax.typesetPromise) {
+                MathJax.typesetPromise([contentEl]).catch((err) => console.log(err.message));
+            }
+        }
+
+        prevBtn.addEventListener('click', () => {
+            if (currentStep > 0) { currentStep--; updateStep(); }
+        });
+        
+        nextBtn.addEventListener('click', () => {
+            if (currentStep < steps.length - 1) { currentStep++; updateStep(); }
+        });
+
+        // リサイズ対応
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // 描画ループ
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        // 初期化実行
+        animate();
+        updateStep();
+
+    </script>
+</body>
+</html>

@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>空間図形 解説アニメーション</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Three.js & Plugins -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <!-- Removed QuickHull and ConvexGeometry as we will build custom geometries -->
+    <!-- GSAP for Animations -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+</head>
+<body class="bg-white text-slate-800 font-sans h-screen overflow-hidden">
+    <div class="flex flex-col md:flex-row h-full w-full">
+        <!-- 3D Canvas Area -->
+        <div id="canvas-container" class="w-full md:w-2/3 h-1/2 md:h-full relative bg-slate-50 border-b md:border-b-0 md:border-r border-slate-200">
+            <div class="absolute top-4 left-4 bg-white/90 backdrop-blur px-3 py-2 rounded-lg shadow-sm text-xs md:text-sm font-medium text-slate-600 pointer-events-none z-10">
+                <p>🖱️ マウス/スワイプで視点移動</p>
+                <p>🔍 スクロールで拡大縮小</p>
+            </div>
+        </div>
+        
+        <!-- Sidebar Area -->
+        <div class="w-full md:w-1/3 h-1/2 md:h-full flex flex-col bg-white">
+            <div class="p-6 md:p-8 flex-1 overflow-y-auto">
+                <h1 class="text-2xl font-extrabold text-slate-900 mb-6 tracking-tight">立体の体積 解説</h1>
+                
+                <div class="space-y-6">
+                    <div>
+                        <h2 id="step-title" class="text-lg font-bold text-blue-600 mb-3 border-b-2 border-blue-100 pb-2">
+                            <!-- Title injected via JS -->
+                        </h2>
+                        <p id="step-desc" class="text-slate-600 leading-relaxed text-sm md:text-base">
+                            <!-- Description injected via JS -->
+                        </p>
+                    </div>
+                    
+                    <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 shadow-sm">
+                        <p id="step-formula" class="text-slate-800 font-mono font-bold text-center text-base md:text-lg">
+                            <!-- Formula injected via JS -->
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Navigation -->
+            <div class="p-4 md:p-6 bg-white border-t border-slate-100 flex items-center justify-between shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+                <button id="prev-btn" class="px-4 py-2.5 bg-white border border-slate-300 text-slate-700 rounded-lg shadow-sm hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all font-semibold text-sm">
+                    ◀ 前へ
+                </button>
+                <span id="step-indicator" class="text-slate-500 font-bold text-sm tracking-widest">
+                    1 / 6
+                </span>
+                <button id="next-btn" class="px-4 py-2.5 bg-blue-600 text-white rounded-lg shadow-sm hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all font-semibold text-sm">
+                    次へ ▶
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // === 3Dシーンの初期化 ===
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xf8fafc); // slate-50
+
+        const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 100);
+        camera.position.set(7, 5, 9);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(container.clientWidth, container.clientHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        container.appendChild(renderer.domElement);
+
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.target.set(0, 0, 0);
+
+        // ライトの設定
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+        scene.add(ambientLight);
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.6);
+        dirLight.position.set(10, 20, 15);
+        scene.add(dirLight);
+        const dirLight2 = new THREE.DirectionalLight(0xffffff, 0.3);
+        dirLight2.position.set(-10, -10, -10);
+        scene.add(dirLight2);
+
+        // === 座標定義 ===
+        // 問題の寸法: AB=2, BC=4, BE=AD=6。Dを原点近傍とする。
+        // Three.js上での見栄えのため、中心を原点にオフセットする
+        const offset = new THREE.Vector3(-1, -3, -2);
+        const v = {
+            D: new THREE.Vector3(0, 0, 4).add(offset),
+            E: new THREE.Vector3(2, 0, 4).add(offset),
+            F: new THREE.Vector3(2, 0, 0).add(offset),
+            A: new THREE.Vector3(0, 6, 4).add(offset),
+            B: new THREE.Vector3(2, 6, 4).add(offset),
+            C: new THREE.Vector3(2, 6, 0).add(offset),
+            P: new THREE.Vector3(1, 6, 2).add(offset), // ACの中点
+            Q: new THREE.Vector3(2, 6, 2).add(offset), // BCの中点
+            R: new THREE.Vector3(0, 3, 4).add(offset), // ADの中点
+            S: new THREE.Vector3(2, 3, 4).add(offset), // BEの中点
+            G: new THREE.Vector3(1, 6, 4).add(offset), // ABの中点
+            H: new THREE.Vector3(1, 3, 4).add(offset)  // RSの中点
+        };
+
+        // === カスタムジオメトリ生成ヘルパー ===
+        // 頂点配列と面（三角形のインデックス）からBufferGeometryを生成する
+        function createCustomGeometry(verticesObj, indices) {
+            const geometry = new THREE.BufferGeometry();
+            
+            // 頂点を配列に変換
+            const vertices = [];
+            const vertexKeys = Object.keys(verticesObj);
+            const vertexIndices = {};
+            
+            vertexKeys.forEach((key, index) => {
+                vertices.push(verticesObj[key].x, verticesObj[key].y, verticesObj[key].z);
+                vertexIndices[key] = index;
+            });
+            
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+            
+            // 面のインデックスを設定
+            const indexArray = [];
+            indices.forEach(face => {
+                // 各面を構成する頂点キーからインデックスを取得
+                indexArray.push(vertexIndices[face[0]], vertexIndices[face[1]], vertexIndices[face[2]]);
+            });
+            
+            geometry.setIndex(indexArray);
+            geometry.computeVertexNormals(); // 法線を計算してライティングを有効にする
+            
+            return geometry;
+        }
+
+        // === オブジェクト生成ヘルパー ===
+        function createMeshGroup(geometry, colorHex) {
+            const mat = new THREE.MeshStandardMaterial({
+                color: colorHex,
+                transparent: true,
+                opacity: 0.8,
+                roughness: 0.2,
+                metalness: 0.1,
+                side: THREE.DoubleSide,
+                polygonOffset: true,
+                polygonOffsetFactor: 1,
+                polygonOffsetUnits: 1
+            });
+            const mesh = new THREE.Mesh(geometry, mat);
+            
+            const edges = new THREE.EdgesGeometry(geometry);
+            const lineMat = new THREE.LineBasicMaterial({ color: 0x334155, transparent: true, opacity: 0.4 });
+            const line = new THREE.LineSegments(edges, lineMat);
+            
+            const group = new THREE.Group();
+            group.add(mesh);
+            group.add(line);
+            return group;
+        }
+
+        // 1. 求める立体 (P, Q, C, R, S, D, E, F) の定義
+        const targetGeo = createCustomGeometry(
+            { P: v.P, Q: v.Q, C: v.C, R: v.R, S: v.S, D: v.D, E: v.E, F: v.F },
+            [
+                // 底面 (D-E-F)
+                ['D', 'F', 'E'],
+                // 上面 (P-Q-C)
+                ['P', 'Q', 'C'],
+                // 側面1 (P-C-F-R) -> P-C-F, P-F-R (R-F-Dも含むため複雑。面ごとに分割)
+                ['P', 'C', 'F'], ['P', 'F', 'R'], ['R', 'F', 'D'],
+                // 側面2 (Q-C-F-E-S)
+                ['Q', 'C', 'F'], ['Q', 'F', 'E'], ['Q', 'E', 'S'],
+                // 側面3 (P-Q-S-E-D-R) -> (P-Q-S-R) と (R-S-E-D)
+                ['P', 'Q', 'S'], ['P', 'S', 'R'],
+                ['R', 'S', 'E'], ['R', 'E', 'D']
+            ]
+        );
+
+        // 2. 三角柱PGH-QBS の定義
+        const prismGeo = createCustomGeometry(
+            { P: v.P, G: v.G, H: v.H, Q: v.Q, B: v.B, S: v.S },
+            [
+                ['P', 'H', 'G'], // 奥の底面
+                ['Q', 'B', 'S'], // 手前の底面
+                ['P', 'Q', 'S'], ['P', 'S', 'H'], // 側面1 (斜面)
+                ['P', 'G', 'B'], ['P', 'B', 'Q'], // 側面2 (上面)
+                ['G', 'H', 'S'], ['G', 'S', 'B']  // 側面3 (垂直面)
+            ]
+        );
+
+        // 3. 四角錐P-ARHG の定義
+        const pyramidGeo = createCustomGeometry(
+            { P: v.P, A: v.A, R: v.R, H: v.H, G: v.G },
+            [
+                ['A', 'G', 'H'], ['A', 'H', 'R'], // 底面 ARHG
+                ['P', 'A', 'G'], // 側面 (上)
+                ['P', 'G', 'H'], // 側面 (前)
+                ['P', 'H', 'R'], // 側面 (下)
+                ['P', 'R', 'A']  // 側面 (奥)
+            ]
+        );
+
+        const groupTarget = createMeshGroup(targetGeo, 0xe2e8f0);
+        const groupPrism = createMeshGroup(prismGeo, 0xe2e8f0);
+        const groupPyramid = createMeshGroup(pyramidGeo, 0xe2e8f0);
+
+        scene.add(groupTarget);
+        scene.add(groupPrism);
+        scene.add(groupPyramid);
+
+        // === ラベル生成 ===
+        const labelSprites = {};
+        function createTextSprite(text) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 64; canvas.height = 64;
+            const ctx = canvas.getContext('2d');
+            
+            ctx.beginPath();
+            ctx.arc(32, 32, 22, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+            ctx.fill();
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = '#334155';
+            ctx.stroke();
+            
+            ctx.font = 'bold 24px sans-serif';
+            ctx.fillStyle = '#0f172a';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(text, 32, 34);
+            
+            const texture = new THREE.CanvasTexture(canvas);
+            const material = new THREE.SpriteMaterial({ map: texture, depthTest: false });
+            const sprite = new THREE.Sprite(material);
+            sprite.scale.set(1.0, 1.0, 1.0);
+            sprite.renderOrder = 999;
+            return sprite;
+        }
+
+        function addLabel(id, pos, group) {
+            const sprite = createTextSprite(id);
+            sprite.position.copy(pos);
+            const offsetDir = pos.clone().normalize().multiplyScalar(0.4);
+            sprite.position.add(offsetDir);
+            group.add(sprite);
+            labelSprites[id] = sprite;
+        }
+
+        // ラベルの割り当て
+        addLabel('C', v.C, groupTarget);
+        addLabel('D', v.D, groupTarget);
+        addLabel('E', v.E, groupTarget);
+        addLabel('F', v.F, groupTarget);
+        
+        addLabel('Q', v.Q, groupPrism);
+        addLabel('B', v.B, groupPrism);
+        addLabel('S', v.S, groupPrism);
+        addLabel('G', v.G, groupPrism);
+        
+        addLabel('P', v.P, groupPyramid);
+        addLabel('A', v.A, groupPyramid);
+        addLabel('R', v.R, groupPyramid);
+        addLabel('H', v.H, groupPyramid);
+
+        // 初期状態でGとHは隠す
+        labelSprites['G'].scale.set(0, 0, 0);
+        labelSprites['H'].scale.set(0, 0, 0);
+
+        // === アニメーション制御ヘルパー ===
+        function setOpacity(group, opacity) {
+            group.children.forEach(child => {
+                if (child.isMesh) gsap.to(child.material, { opacity: opacity, duration: 0.8 });
+                if (child.isLineSegments) gsap.to(child.material, { opacity: opacity > 0.1 ? 0.4 : 0.05, duration: 0.8 });
+                if (child.isSprite && child !== labelSprites['G'] && child !== labelSprites['H']) {
+                    gsap.to(child.material, { opacity: opacity > 0.1 ? 1 : 0.2, duration: 0.8 });
+                }
+            });
+        }
+
+        function setColor(group, colorHex) {
+            const targetColor = new THREE.Color(colorHex);
+            group.children.forEach(child => {
+                if (child.isMesh) {
+                    gsap.to(child.material.color, { r: targetColor.r, g: targetColor.g, b: targetColor.b, duration: 0.8 });
+                }
+            });
+        }
+
+        function moveTo(group, posArray) {
+            gsap.to(group.position, {x: posArray[0], y: posArray[1], z: posArray[2], duration: 1, ease: "power2.inOut"});
+        }
+
+        // === ステップ定義 ===
+        const steps = [
+            {
+                title: "1. 元の立体の確認",
+                desc: "右の図は、直角三角形ABC, DEFを底面とする三角柱です。<br>AB=2cm, BC=4cm, 高さが AD=BE=6cm なので、<br>全体の体積は <b>(1/2 × 2 × 4) × 6 = 24 cm³</b> です。",
+                formula: "全体の体積 = 24 cm³",
+                action: () => {
+                    moveTo(groupTarget, [0,0,0]);
+                    moveTo(groupPrism, [0,0,0]);
+                    moveTo(groupPyramid, [0,0,0]);
+                    setOpacity(groupTarget, 0.8);
+                    setOpacity(groupPrism, 0.8);
+                    setOpacity(groupPyramid, 0.8);
+                    setColor(groupTarget, 0xe2e8f0);
+                    setColor(groupPrism, 0xe2e8f0);
+                    setColor(groupPyramid, 0xe2e8f0);
+                    gsap.to(labelSprites['G'].scale, { x: 0, y: 0, z: 0, duration: 0.5 });
+                    gsap.to(labelSprites['H'].scale, { x: 0, y: 0, z: 0, duration: 0.5 });
+                }
+            },
+            {
+                title: "2. 求める立体の把握",
+                desc: "今回体積を求める立体（<span class='text-blue-600 font-bold'>青色</span>）は、全体の三角柱から、上部の立体ABPQ-RS（<span class='text-red-500 font-bold'>赤色</span>）を切り取った形をしています。<br>つまり、<b>(全体の体積) - (赤色の体積)</b> で求められます。",
+                formula: "求める体積 = 24 - (赤色の体積)",
+                action: () => {
+                    setColor(groupTarget, 0x3b82f6); // Blue
+                    setColor(groupPrism, 0xef4444); // Red
+                    setColor(groupPyramid, 0xef4444);
+                    moveTo(groupTarget, [0, -0.8, 0]);
+                    moveTo(groupPrism, [0, 0.8, 0]);
+                    moveTo(groupPyramid, [0, 0.8, 0]);
+                    setOpacity(groupTarget, 0.9);
+                    setOpacity(groupPrism, 0.8);
+                    setOpacity(groupPyramid, 0.8);
+                    gsap.to(labelSprites['G'].scale, { x: 0, y: 0, z: 0, duration: 0.5 });
+                    gsap.to(labelSprites['H'].scale, { x: 0, y: 0, z: 0, duration: 0.5 });
+                }
+            },
+            {
+                title: "3. 切り取る立体の分割",
+                desc: "切り取る赤色の体積を計算しやすくするため、点Pを通り面BCFEに平行な平面で分割します。<br>辺AB, RSとの交点をそれぞれ <b>G, H</b> とすると、立体は<span class='text-amber-500 font-bold'>三角柱</span>と<span class='text-emerald-500 font-bold'>四角錐</span>に分かれます。",
+                formula: "赤色の体積 = (三角柱) + (四角錐)",
+                action: () => {
+                    setOpacity(groupTarget, 0.1);
+                    setColor(groupPrism, 0xf59e0b); // Amber
+                    setColor(groupPyramid, 0x10b981); // Emerald
+                    moveTo(groupTarget, [0, -0.8, 0]);
+                    moveTo(groupPrism, [1.5, 1.5, -1.0]);
+                    moveTo(groupPyramid, [-1.5, 1.5, 1.0]);
+                    setOpacity(groupPrism, 0.9);
+                    setOpacity(groupPyramid, 0.9);
+                    gsap.to(labelSprites['G'].scale, { x: 1, y: 1, z: 1, duration: 0.5 });
+                    gsap.to(labelSprites['H'].scale, { x: 1, y: 1, z: 1, duration: 0.5 });
+                }
+            },
+            {
+                title: "4. 三角柱PGH-QBSの体積",
+                desc: "<span class='text-amber-500 font-bold'>黄色い部分</span>は三角柱PGH-QBSです。<br>底面△PGHは直角三角形で、底辺GH=3cm, 高さPG=2cm。よって底面積は <b>3 cm²</b>。<br>三角柱の高さは BG=1cm です。",
+                formula: "三角柱の体積 = 3 × 1 = 3 cm³",
+                action: () => {
+                    setOpacity(groupTarget, 0.05);
+                    setOpacity(groupPyramid, 0.1);
+                    setOpacity(groupPrism, 0.9);
+                    moveTo(groupTarget, [0, -0.8, 0]);
+                    moveTo(groupPrism, [0, 0, 0]);
+                    moveTo(groupPyramid, [-3, 2, 2]);
+                }
+            },
+            {
+                title: "5. 四角錐P-ARHGの体積",
+                desc: "<span class='text-emerald-500 font-bold'>緑色の部分</span>は四角錐P-ARHGです。<br>底面は長方形ARHGで、縦AR=3cm, 横AG=1cm。よって底面積は <b>3 cm²</b>。<br>四角錐の高さは PG=2cm です。",
+                formula: "四角錐の体積 = 1/3 × (3×1) × 2 = 2 cm³",
+                action: () => {
+                    setOpacity(groupTarget, 0.05);
+                    setOpacity(groupPrism, 0.1);
+                    setOpacity(groupPyramid, 0.9);
+                    moveTo(groupTarget, [0, -0.8, 0]);
+                    moveTo(groupPrism, [3, 2, -2]);
+                    moveTo(groupPyramid, [0, 0, 0]);
+                }
+            },
+            {
+                title: "6. 結論",
+                desc: "全体の体積から、切り取った三角柱と四角錐の体積を引きます。<br><b>24 - 3 - 2 = 19 cm³</b><br>これが求める立体の体積となります。",
+                formula: "答え: 19 cm³",
+                action: () => {
+                    moveTo(groupTarget, [0,0,0]);
+                    moveTo(groupPrism, [0,0,0]);
+                    moveTo(groupPyramid, [0,0,0]);
+                    setOpacity(groupTarget, 0.9);
+                    setOpacity(groupPrism, 0.8);
+                    setOpacity(groupPyramid, 0.8);
+                    // 色は最終的な分離色を保持して分かりやすくする
+                }
+            }
+        ];
+
+        // === UI制御 ===
+        let currentStep = 0;
+
+        function updateUI() {
+            const step = steps[currentStep];
+            document.getElementById('step-title').innerHTML = step.title;
+            document.getElementById('step-desc').innerHTML = step.desc;
+            document.getElementById('step-formula').innerHTML = step.formula;
+            document.getElementById('step-indicator').innerText = `${currentStep + 1} / ${steps.length}`;
+            
+            document.getElementById('prev-btn').disabled = currentStep === 0;
+            document.getElementById('next-btn').disabled = currentStep === steps.length - 1;
+            
+            step.action();
+        }
+
+        document.getElementById('prev-btn').addEventListener('click', () => {
+            if (currentStep > 0) { currentStep--; updateUI(); }
+        });
+
+        document.getElementById('next-btn').addEventListener('click', () => {
+            if (currentStep < steps.length - 1) { currentStep++; updateUI(); }
+        });
+
+        // 初回実行
+        updateUI();
+
+        // === レンダリングループ ===
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        // リサイズ対応
+        window.addEventListener('resize', () => {
+            camera.aspect = container.clientWidth / container.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(container.clientWidth, container.clientHeight);
+        });
+    </script>
+</body>
+</html>
