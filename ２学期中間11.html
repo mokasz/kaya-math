@@ -35,3 +35,521 @@
 <body class="flex flex-col md:flex-row h-screen">
 
     <div class="w-full md:w-1/3 bg-white border-r border-gray-200 flex flex-col h-1/2 md:h-full z-10 shadow-lg">
+        <div class="p-5 border-b border-gray-200 bg-gray-50">
+            <h1 class="text-lg font-bold text-gray-800">立体の切断と体積比</h1>
+            <p class="text-sm text-gray-500 mt-1">3Dアニメーション解説</p>
+        </div>
+        
+        <div class="flex-1 overflow-y-auto p-5">
+            <!-- Step Navigation -->
+            <div class="flex flex-col space-y-2 mb-6">
+                <button onclick="setStep(0)" id="btn-step-0" class="px-4 py-2 text-left rounded border transition-colors btn-active text-sm font-bold">1. 問題の設定と立体V</button>
+                <button onclick="setStep(1)" id="btn-step-1" class="px-4 py-2 text-left rounded border transition-colors btn-inactive text-sm font-bold">2. 平面での切断</button>
+                <button onclick="setStep(2)" id="btn-step-2" class="px-4 py-2 text-left rounded border transition-colors btn-inactive text-sm font-bold">3. (1) 切り口の面積</button>
+                <button onclick="setStep(3)" id="btn-step-3" class="px-4 py-2 text-left rounded border transition-colors btn-inactive text-sm font-bold">4. (2) 体積比 - 全体像</button>
+                <button onclick="setStep(4)" id="btn-step-4" class="px-4 py-2 text-left rounded border transition-colors btn-inactive text-sm font-bold">5. ①上の三角錐の手前 (7a)</button>
+                <button onclick="setStep(5)" id="btn-step-5" class="px-4 py-2 text-left rounded border transition-colors btn-inactive text-sm font-bold">6. ②立方体の手前半分 (24a)</button>
+                <button onclick="setStep(6)" id="btn-step-6" class="px-4 py-2 text-left rounded border transition-colors btn-inactive text-sm font-bold">7. ③欠けている部分 (a)</button>
+                <button onclick="setStep(7)" id="btn-step-7" class="px-4 py-2 text-left rounded border transition-colors btn-inactive text-sm font-bold">8. 最終的な体積比</button>
+            </div>
+
+            <!-- Content for Step 0 -->
+            <div id="content-step-0" class="step-content active text-sm text-gray-700 leading-relaxed space-y-3">
+                <p>元の立方体 <span class="math">ABCD-EFGH</span> から、三角錐 <span class="math">G-BCD</span> を切り取ります。</p>
+                <p>切り取った三角錐を、線分 <span class="math">BD</span> を軸として180度回転させ、点 <span class="math">C</span> が点 <span class="math">A</span> に重なるように配置します。</p>
+                <p>これにより、頂点 <span class="math">G</span> は点 <span class="math">A</span> の真上にある点 <span class="math">I</span> に移動し、新しい立体 <span class="math">V</span> が完成します。</p>
+            </div>
+
+            <!-- Content for Step 1 -->
+            <div id="content-step-1" class="step-content text-sm text-gray-700 leading-relaxed space-y-3">
+                <p>線分 <span class="math">BD</span> の中点を <span class="math">L</span>、線分 <span class="math">BI</span> の中点を <span class="math">M</span> とします。</p>
+                <p>点 <span class="math">L</span> を通り、手前の面 <span class="math">ABFE</span> に平行な平面（半透明の青色）で立体 <span class="math">V</span> を切断します。</p>
+                <p>この平面は、線分 <span class="math">AD</span>、<span class="math">ID</span>、<span class="math">BD</span>、<span class="math">BG</span>、<span class="math">FG</span>、<span class="math">EH</span> の各中点を通る六角形の切り口を作ります。</p>
+            </div>
+
+            <!-- Content for Step 2 -->
+            <div id="content-step-2" class="step-content text-sm text-gray-700 leading-relaxed space-y-3">
+                <p class="font-bold text-blue-600">問題(1) 切り口の面積は正方形ABFEの何倍か？</p>
+                <p>切り口の図形を正面から見てみましょう。正方形 <span class="math">ABFE</span> と比較します。</p>
+                <p>切り口のうち、正方形からはみ出ている上の三角形を <span class="math">S</span>、正方形の中で欠けている右下の三角形を <span class="math">T</span> とします。</p>
+                <p>三角形 <span class="math">S</span> を点 <span class="math">L</span> を中心に180度回転させると、三角形 <span class="math">T</span> にぴったり重なります！</p>
+                <div class="bg-blue-50 p-3 rounded border border-blue-100">
+                    <p class="font-bold">結論：面積は等しいので 1 倍</p>
+                </div>
+            </div>
+
+            <!-- Content for Step 3 -->
+            <div id="content-step-3" class="step-content text-sm text-gray-700 leading-relaxed space-y-3">
+                <p class="font-bold text-blue-600">問題(2) 体積比 - 手前側の構成</p>
+                <p>手前（点 <span class="math">I</span> を含む側）の体積を求めます。</p>
+                <p>立体Vの手前部分は、以下の3つのパーツの足し引きで計算できます。</p>
+                <ul class="list-decimal pl-5 space-y-1 font-bold">
+                    <li class="text-blue-600">上の大きな三角錐の手前部分</li>
+                    <li class="text-green-600">立方体の手前半分</li>
+                    <li class="text-red-600">右下の空洞（引く部分）</li>
+                </ul>
+            </div>
+
+            <!-- Content for Step 4 -->
+            <div id="content-step-4" class="step-content text-sm text-gray-700 leading-relaxed space-y-3">
+                <p class="font-bold text-blue-600">① 上の大きな三角錐の手前</p>
+                <p>奥の小さな三角錐 <span class="math">DPQL</span> の体積を <span class="math font-bold text-purple-600">a</span> とします。</p>
+                <p>上の大きな三角錐 <span class="math">I-ABD</span> は、これと相似（相似比2倍）なので、体積は <span class="math">2³ = 8</span>倍の <span class="math font-bold text-blue-600">8a</span> です。</p>
+                <p>手前部分は、全体(8a)から奥(a)を引いた残りなので、<br><span class="math font-bold">8a - a = <span class="text-blue-600 text-lg">7a</span></span> となります。</p>
+            </div>
+
+            <!-- Content for Step 5 -->
+            <div id="content-step-5" class="step-content text-sm text-gray-700 leading-relaxed space-y-3">
+                <p class="font-bold text-green-600">② 立方体の手前半分</p>
+                <p>上の三角錐 <span class="math">I-ABD (8a)</span> は、立方体のちょうど <span class="math">1/6</span> の体積にあたります。</p>
+                <p>そのため、立方体全体の体積は <span class="math">8a × 6 = <span class="font-bold">48a</span></span> と表せます。</p>
+                <p>切断面は立方体をちょうど前後に二等分するので、手前半分の体積は <span class="math">48a ÷ 2 = <span class="text-green-600 font-bold text-lg">24a</span></span> になります。</p>
+            </div>
+
+            <!-- Content for Step 6 -->
+            <div id="content-step-6" class="step-content text-sm text-gray-700 leading-relaxed space-y-3">
+                <p class="font-bold text-red-600">③ 右下の欠けている部分</p>
+                <p>最初に切り取った三角錐 <span class="math">G-BCD</span> を思い出してください。切断面より手前側にあるのは、点 <span class="math">B</span> を頂点とする小さな三角錐です。</p>
+                <p>これは基準とした <span class="math">DPQL</span> と全く同じ形・サイズなので、体積は <span class="math font-bold text-red-600">a</span> です。</p>
+                <p>この部分は元々切り取られて「無い」部分なので、最後に引く必要があります。</p>
+            </div>
+
+            <!-- Content for Step 7 -->
+            <div id="content-step-7" class="step-content text-sm text-gray-700 leading-relaxed space-y-3">
+                <p class="font-bold text-gray-800">最終的な体積比の計算</p>
+                <p>これまでの結果を合計して、手前側の体積を出します。</p>
+                <div class="bg-gray-100 p-2 rounded text-center font-bold">
+                    手前 = <span class="text-blue-600">7a</span> ＋ <span class="text-green-600">24a</span> － <span class="text-red-600">a</span> ＝ 30a
+                </div>
+                <p>全体は <span class="math">48a</span> なので、奥側の体積は <span class="math">48a - 30a = 18a</span> です。</p>
+                <div class="bg-blue-50 p-3 rounded border border-blue-100">
+                    <p class="font-bold">体積比 = 30a : 18a <br>= 30 : 18 = <span class="text-xl text-blue-700">5 : 3</span></p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="p-4 border-t border-gray-200 bg-gray-50 flex justify-between items-center">
+            <button onclick="prevStep()" class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition-colors text-sm font-bold disabled:opacity-50" id="btn-prev" disabled>戻る</button>
+            <span id="step-indicator" class="text-sm font-bold text-gray-500">1 / 4</span>
+            <button onclick="nextStep()" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-sm font-bold disabled:opacity-50" id="btn-next">次へ</button>
+        </div>
+    </div>
+
+    <div id="canvas-container" class="w-full md:w-2/3 h-1/2 md:h-full"></div>
+
+    <script>
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xf3f4f6);
+
+        const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
+        camera.position.set(25, 20, 35);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(container.clientWidth, container.clientHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        container.appendChild(renderer.domElement);
+
+        const labelRenderer = new THREE.CSS2DRenderer();
+        labelRenderer.setSize(container.clientWidth, container.clientHeight);
+        labelRenderer.domElement.style.position = 'absolute';
+        labelRenderer.domElement.style.top = '0px';
+        labelRenderer.domElement.style.pointerEvents = 'none';
+        container.appendChild(labelRenderer.domElement);
+
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.target.set(5, 5, 5);
+
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        dirLight.position.set(10, 20, 30);
+        scene.add(dirLight);
+        const dirLight2 = new THREE.DirectionalLight(0xffffff, 0.4);
+        dirLight2.position.set(-10, -10, -10);
+        scene.add(dirLight2);
+
+        // Core variables
+        const size = 10;
+        let currentStep = 0;
+        const totalSteps = 8;
+        let animationProgress = 0;
+        let isAnimating = false;
+
+        // Group to hold everything
+        const worldGroup = new THREE.Group();
+        scene.add(worldGroup);
+
+        const pts = {
+            D: new THREE.Vector3(0, size, 0),       // Back
+            A: new THREE.Vector3(0, size, size),    // Front-Left
+            B: new THREE.Vector3(size, size, size), // Front-Right
+            C: new THREE.Vector3(size, size, 0),    // Back-Right
+            H: new THREE.Vector3(0, 0, 0),       
+            E: new THREE.Vector3(0, 0, size),    
+            F: new THREE.Vector3(size, 0, size), 
+            G: new THREE.Vector3(size, 0, 0),    
+            I: new THREE.Vector3(0, size * 2, size) // Above A
+        };
+        
+        pts.L = new THREE.Vector3().addVectors(pts.B, pts.D).multiplyScalar(0.5);
+        pts.M = new THREE.Vector3().addVectors(pts.B, pts.I).multiplyScalar(0.5);
+        pts.P = new THREE.Vector3(0, size, size*0.5); // Intersection on AD
+        pts.Q = new THREE.Vector3(0, size*1.5, size*0.5); // Intersection on ID
+        pts.R = new THREE.Vector3(size, size*0.5, size*0.5); // Intersection on BG
+        pts.P_bot = new THREE.Vector3(0, 0, size*0.5); // Intersection on EH
+        pts.R_bot = new THREE.Vector3(size, 0, size*0.5); // Intersection on FG
+        pts.Bp = new THREE.Vector3(size, size, size*0.5); // Point B' for region T
+
+        const labels = {};
+        function createLabel(text, pos, offset = [0,0]) {
+            const div = document.createElement('div');
+            div.className = 'label';
+            div.textContent = text;
+            if(offset[0] !== 0 || offset[1] !== 0) {
+                div.style.marginTop = offset[1] + 'px';
+                div.style.marginLeft = offset[0] + 'px';
+            }
+            const label = new THREE.CSS2DObject(div);
+            label.position.copy(pos);
+            worldGroup.add(label);
+            return label;
+        }
+
+        labels.A = createLabel('A', pts.A, [-15, -15]);
+        labels.B = createLabel('B', pts.B, [15, -15]);
+        labels.C = createLabel('C', pts.C, [15, -15]);
+        labels.D = createLabel('D', pts.D, [-15, -15]);
+        labels.E = createLabel('E', pts.E, [-15, 15]);
+        labels.F = createLabel('F', pts.F, [15, 15]);
+        labels.G = createLabel('G', pts.G, [15, 15]);
+        labels.H = createLabel('H', pts.H, [-15, 15]);
+        labels.I = createLabel('I', pts.I, [0, -20]);
+        labels.L = createLabel('L', pts.L, [15, -5]);
+        labels.M = createLabel('M', pts.M, [-15, -15]);
+        labels.P = createLabel('P', pts.P, [-20, 0]);
+        labels.Q = createLabel('Q', pts.Q, [-20, 0]);
+
+        const matSolid = new THREE.MeshPhysicalMaterial({
+            color: 0xe5e7eb, metalness: 0.1, roughness: 0.5, transparent: true, opacity: 0.7,
+            side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1
+        });
+        const matPyramidCut = new THREE.MeshPhysicalMaterial({
+            color: 0xef4444, metalness: 0.1, roughness: 0.5, transparent: true, opacity: 0.8,
+            side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1
+        });
+        const matWireframe = new THREE.LineBasicMaterial({ color: 0x4b5563, linewidth: 2 });
+        const matWireframeBold = new THREE.LineBasicMaterial({ color: 0x1f2937, linewidth: 3 });
+
+        // 1. Original Cube (minus G-BCD)
+        const geomCubeRem = new THREE.BufferGeometry();
+        const vertsCubeRem = [
+            // EFGH
+            ...pts.E.toArray(), ...pts.H.toArray(), ...pts.G.toArray(),
+            ...pts.E.toArray(), ...pts.G.toArray(), ...pts.F.toArray(),
+            // ADHE
+            ...pts.A.toArray(), ...pts.E.toArray(), ...pts.H.toArray(),
+            ...pts.A.toArray(), ...pts.H.toArray(), ...pts.D.toArray(),
+            // ABFE
+            ...pts.A.toArray(), ...pts.B.toArray(), ...pts.F.toArray(),
+            ...pts.A.toArray(), ...pts.F.toArray(), ...pts.E.toArray(),
+            // DHG
+            ...pts.D.toArray(), ...pts.H.toArray(), ...pts.G.toArray(),
+            // BFG
+            ...pts.B.toArray(), ...pts.F.toArray(), ...pts.G.toArray(),
+            // ABD (top hole)
+            ...pts.A.toArray(), ...pts.D.toArray(), ...pts.B.toArray(),
+            // BDG (cut face)
+            ...pts.B.toArray(), ...pts.D.toArray(), ...pts.G.toArray(),
+        ];
+        geomCubeRem.setAttribute('position', new THREE.Float32BufferAttribute(vertsCubeRem, 3));
+        geomCubeRem.computeVertexNormals();
+        const meshCubeRem = new THREE.Mesh(geomCubeRem, matSolid);
+        worldGroup.add(meshCubeRem);
+
+        const edgesCubeRem = new THREE.LineSegments(new THREE.EdgesGeometry(geomCubeRem, 15), matWireframe);
+        worldGroup.add(edgesCubeRem);
+
+        // 2. Pyramid G-BCD (The part that is cut and rotated)
+        const geomPyramid = new THREE.BufferGeometry();
+        const vertsPyramid = [
+            ...pts.G.toArray(), ...pts.B.toArray(), ...pts.C.toArray(),
+            ...pts.G.toArray(), ...pts.C.toArray(), ...pts.D.toArray(),
+            ...pts.B.toArray(), ...pts.C.toArray(), ...pts.D.toArray(),
+            ...pts.G.toArray(), ...pts.D.toArray(), ...pts.B.toArray(),
+        ];
+        geomPyramid.setAttribute('position', new THREE.Float32BufferAttribute(vertsPyramid, 3));
+        geomPyramid.computeVertexNormals();
+        
+        // Wrap pyramid in a pivot group for rotation
+        const pivotPyramid = new THREE.Group();
+        pivotPyramid.position.copy(pts.L); // Pivot at L
+        worldGroup.add(pivotPyramid);
+        
+        const meshPyramid = new THREE.Mesh(geomPyramid, matPyramidCut);
+        // Offset mesh inside pivot so its global position is correct when pivot is at L
+        meshPyramid.position.sub(pts.L);
+        pivotPyramid.add(meshPyramid);
+        
+        const edgesPyramid = new THREE.LineSegments(new THREE.EdgesGeometry(geomPyramid), new THREE.LineBasicMaterial({color: 0x991b1b}));
+        meshPyramid.add(edgesPyramid);
+
+        // 3. The original full cube wireframe (for reference)
+        const geomFullCube = new THREE.BoxGeometry(size, size, size);
+        const edgesFullCube = new THREE.LineSegments(new THREE.EdgesGeometry(geomFullCube), new THREE.LineBasicMaterial({color: 0x9ca3af, transparent: true, opacity: 0.5, dashSize: 0.5, gapSize: 0.5}));
+        edgesFullCube.position.set(size/2, size/2, size/2);
+        edgesFullCube.computeLineDistances();
+        worldGroup.add(edgesFullCube);
+
+        // Cut Plane (z=5)
+        const geomPlane = new THREE.PlaneGeometry(size * 1.5, size * 2.5);
+        const matPlane = new THREE.MeshBasicMaterial({color: 0x3b82f6, transparent: true, opacity: 0.0, side: THREE.DoubleSide});
+        const meshPlane = new THREE.Mesh(geomPlane, matPlane);
+        meshPlane.position.set(size/2, size, size/2);
+        worldGroup.add(meshPlane);
+
+        // Cross Section Polygon Outline
+        const crossSecVerts = [
+            pts.Q, pts.P, pts.P_bot, pts.R_bot, pts.R, pts.L, pts.Q
+        ];
+        const geomCrossSecLine = new THREE.BufferGeometry().setFromPoints(crossSecVerts);
+        const lineCrossSec = new THREE.Line(geomCrossSecLine, new THREE.LineBasicMaterial({color: 0x2563eb, linewidth: 3, transparent: true, opacity: 0}));
+        worldGroup.add(lineCrossSec);
+
+        // Triangle S (Extra part) - Wrapped in pivot group at L for animation
+        const geomS = new THREE.BufferGeometry();
+        // Vertices relative to L
+        const vertsS = [
+            0, 0, 0, // L
+            pts.P.x - pts.L.x, pts.P.y - pts.L.y, pts.P.z - pts.L.z, // P
+            pts.Q.x - pts.L.x, pts.Q.y - pts.L.y, pts.Q.z - pts.L.z, // Q
+        ];
+        geomS.setAttribute('position', new THREE.Float32BufferAttribute(vertsS, 3));
+        const matS = new THREE.MeshBasicMaterial({color: 0xf59e0b, transparent: true, opacity: 0, side: THREE.DoubleSide});
+        const meshS = new THREE.Mesh(geomS, matS);
+        const edgesS = new THREE.LineSegments(new THREE.EdgesGeometry(geomS), new THREE.LineBasicMaterial({color: 0xb45309, transparent:true, opacity:0}));
+        meshS.add(edgesS);
+        
+        const pivotS = new THREE.Group();
+        pivotS.position.copy(pts.L);
+        pivotS.add(meshS);
+        worldGroup.add(pivotS);
+
+        // Triangle T (Missing part)
+        const geomT = new THREE.BufferGeometry();
+        const vertsT = [
+            ...pts.L.toArray(), ...pts.Bp.toArray(), ...pts.R.toArray()
+        ];
+        geomT.setAttribute('position', new THREE.Float32BufferAttribute(vertsT, 3));
+        const matT = new THREE.MeshBasicMaterial({color: 0x10b981, transparent: true, opacity: 0, side: THREE.DoubleSide});
+        const meshT = new THREE.Mesh(geomT, matT);
+        worldGroup.add(meshT);
+
+        // Setup axis for rotation (BD vector)
+        const axisBD = new THREE.Vector3().subVectors(pts.B, pts.D).normalize();
+        const axisZ = new THREE.Vector3(0,0,1);
+
+        // Highlight a : Tetrahedron D-PQL
+        const geomA = new THREE.BufferGeometry();
+        geomA.setAttribute('position', new THREE.Float32BufferAttribute([
+            ...pts.D.toArray(), ...pts.P.toArray(), ...pts.Q.toArray(),
+            ...pts.D.toArray(), ...pts.Q.toArray(), ...pts.L.toArray(),
+            ...pts.D.toArray(), ...pts.L.toArray(), ...pts.P.toArray(),
+            ...pts.P.toArray(), ...pts.Q.toArray(), ...pts.L.toArray()
+        ], 3));
+        geomA.computeVertexNormals();
+        const meshVolA = new THREE.Mesh(geomA, new THREE.MeshPhysicalMaterial({color: 0x8b5cf6, transparent: true, opacity: 0, side: THREE.DoubleSide}));
+        worldGroup.add(meshVolA);
+
+        // 1. Frustum (Top part of I-ABD minus D-PQL, Volume 7a)
+        const geomFrustumTop = new THREE.BufferGeometry();
+        const vertsFrustumTop = [
+            ...pts.I.toArray(), ...pts.B.toArray(), ...pts.A.toArray(),
+            ...pts.P.toArray(), ...pts.L.toArray(), ...pts.Q.toArray(),
+            ...pts.I.toArray(), ...pts.A.toArray(), ...pts.P.toArray(),
+            ...pts.I.toArray(), ...pts.P.toArray(), ...pts.Q.toArray(),
+            ...pts.I.toArray(), ...pts.Q.toArray(), ...pts.L.toArray(),
+            ...pts.I.toArray(), ...pts.L.toArray(), ...pts.B.toArray(),
+            ...pts.A.toArray(), ...pts.B.toArray(), ...pts.L.toArray(),
+            ...pts.A.toArray(), ...pts.L.toArray(), ...pts.P.toArray()
+        ];
+        geomFrustumTop.setAttribute('position', new THREE.Float32BufferAttribute(vertsFrustumTop, 3));
+        geomFrustumTop.computeVertexNormals();
+        const meshFrustumTop = new THREE.Mesh(geomFrustumTop, new THREE.MeshPhysicalMaterial({color: 0x3b82f6, transparent: true, opacity: 0, side: THREE.DoubleSide}));
+        worldGroup.add(meshFrustumTop);
+
+        // 2. Cube Front Half (Volume 24a)
+        const geomCubeFront = new THREE.BoxGeometry(size, size, size/2);
+        const meshCubeFront = new THREE.Mesh(geomCubeFront, new THREE.MeshPhysicalMaterial({color: 0x10b981, transparent: true, opacity: 0}));
+        meshCubeFront.position.set(size/2, size/2, size*0.75); // Centered in the front half
+        worldGroup.add(meshCubeFront);
+
+        // 3. G-BCD Tip (Cutout front part, Volume a)
+        const geomGBCDTip = new THREE.BufferGeometry();
+        const C_p = new THREE.Vector3(size, size, size/2); // Midpoint of BC
+        const G_p = new THREE.Vector3(size, size/2, size/2); // Midpoint of BG
+        const vertsGBCDTip = [
+            ...pts.B.toArray(), ...C_p.toArray(), ...G_p.toArray(),
+            ...pts.B.toArray(), ...G_p.toArray(), ...pts.L.toArray(),
+            ...pts.B.toArray(), ...pts.L.toArray(), ...C_p.toArray(),
+            ...C_p.toArray(), ...pts.L.toArray(), ...G_p.toArray()
+        ];
+        geomGBCDTip.setAttribute('position', new THREE.Float32BufferAttribute(vertsGBCDTip, 3));
+        geomGBCDTip.computeVertexNormals();
+        const meshGBCDTip = new THREE.Mesh(geomGBCDTip, new THREE.MeshPhysicalMaterial({color: 0xef4444, transparent: true, opacity: 0, side: THREE.DoubleSide}));
+        worldGroup.add(meshGBCDTip);
+
+        // Initial visibility
+        labels.I.element.style.display = 'none';
+        labels.L.element.style.display = 'none';
+        labels.M.element.style.display = 'none';
+        labels.P.element.style.display = 'none';
+        labels.Q.element.style.display = 'none';
+
+        const stepStates = [
+            // 0: Intro
+            { pyramidRot: 0, planeOp: 0, crossOp: 0, sRot: 0, sTMatchOp: 0, volDPQL: 0, volFrustum: 0, volCubeFront: 0, volGBCDTip: 0, baseCubeOp: 0.7, cam: [25, 20, 35] },
+            // 1: Plane Cut
+            { pyramidRot: Math.PI, planeOp: 0.2, crossOp: 1, sRot: 0, sTMatchOp: 0, volDPQL: 0, volFrustum: 0, volCubeFront: 0, volGBCDTip: 0, baseCubeOp: 0.7, cam: [20, 15, 30] },
+            // 2: Area Ratio
+            { pyramidRot: Math.PI, planeOp: 0.05, crossOp: 1, sRot: Math.PI, sTMatchOp: 1, volDPQL: 0, volFrustum: 0, volCubeFront: 0, volGBCDTip: 0, baseCubeOp: 0.5, cam: [5, 10, 45] },
+            // 3: Breakdown Overview
+            { pyramidRot: Math.PI, planeOp: 0.1, crossOp: 1, sRot: 0, sTMatchOp: 0, volDPQL: 0, volFrustum: 0.3, volCubeFront: 0.2, volGBCDTip: 0.6, baseCubeOp: 0.2, cam: [30, 25, 25] },
+            // 4: Top Frustum (7a)
+            { pyramidRot: Math.PI, planeOp: 0.0, crossOp: 0, sRot: 0, sTMatchOp: 0, volDPQL: 0.6, volFrustum: 0.8, volCubeFront: 0, volGBCDTip: 0, baseCubeOp: 0.05, cam: [-10, 25, 35] },
+            // 5: Cube Front Half (24a)
+            { pyramidRot: Math.PI, planeOp: 0.0, crossOp: 0, sRot: 0, sTMatchOp: 0, volDPQL: 0, volFrustum: 0, volCubeFront: 0.7, volGBCDTip: 0, baseCubeOp: 0.05, cam: [15, 15, 35] },
+            // 6: GBCD Tip Cutout (a)
+            { pyramidRot: Math.PI, planeOp: 0.0, crossOp: 0, sRot: 0, sTMatchOp: 0, volDPQL: 0.3, volFrustum: 0, volCubeFront: 0.1, volGBCDTip: 0.9, baseCubeOp: 0.05, cam: [30, 15, 25] },
+            // 7: Final Equation
+            { pyramidRot: Math.PI, planeOp: 0.1, crossOp: 1, sRot: 0, sTMatchOp: 0, volDPQL: 0, volFrustum: 0.8, volCubeFront: 0.5, volGBCDTip: 0.9, baseCubeOp: 0.05, cam: [30, 25, 25] }
+        ];
+
+        let currentAnimState = { ...stepStates[0] };
+
+        function animateToState(targetState) {
+            isAnimating = true;
+            const startState = { ...currentAnimState };
+            let startTime = null;
+            const duration = 1000;
+
+            const startCam = camera.position.clone();
+            const targetCam = new THREE.Vector3(...targetState.cam);
+
+            function step(timestamp) {
+                if (!startTime) startTime = timestamp;
+                const progress = Math.min((timestamp - startTime) / duration, 1);
+                const ease = 1 - Math.pow(1 - progress, 3); // easeOutCubic
+
+                // Interpolate variables
+                currentAnimState.pyramidRot = startState.pyramidRot + (targetState.pyramidRot - startState.pyramidRot) * ease;
+                currentAnimState.planeOp = startState.planeOp + (targetState.planeOp - startState.planeOp) * ease;
+                currentAnimState.crossOp = startState.crossOp + (targetState.crossOp - startState.crossOp) * ease;
+                currentAnimState.sRot = startState.sRot + (targetState.sRot - startState.sRot) * ease;
+                currentAnimState.sTMatchOp = startState.sTMatchOp + (targetState.sTMatchOp - startState.sTMatchOp) * ease;
+                currentAnimState.volDPQL = startState.volDPQL + (targetState.volDPQL - startState.volDPQL) * ease;
+                currentAnimState.volFrustum = startState.volFrustum + (targetState.volFrustum - startState.volFrustum) * ease;
+                currentAnimState.volCubeFront = startState.volCubeFront + (targetState.volCubeFront - startState.volCubeFront) * ease;
+                currentAnimState.volGBCDTip = startState.volGBCDTip + (targetState.volGBCDTip - startState.volGBCDTip) * ease;
+                currentAnimState.baseCubeOp = startState.baseCubeOp + (targetState.baseCubeOp - startState.baseCubeOp) * ease;
+
+                // Apply to objects
+                pivotPyramid.userData.rot = currentAnimState.pyramidRot;
+                pivotPyramid.setRotationFromAxisAngle(axisBD, currentAnimState.pyramidRot);
+                
+                matPlane.opacity = currentAnimState.planeOp;
+                lineCrossSec.material.opacity = currentAnimState.crossOp;
+                
+                pivotS.userData.rot = currentAnimState.sRot;
+                pivotS.rotation.z = currentAnimState.sRot;
+                matS.opacity = matT.opacity = edgesS.material.opacity = currentAnimState.sTMatchOp;
+                
+                meshVolA.material.opacity = currentAnimState.volDPQL;
+                meshFrustumTop.material.opacity = currentAnimState.volFrustum;
+                meshCubeFront.material.opacity = currentAnimState.volCubeFront;
+                meshGBCDTip.material.opacity = currentAnimState.volGBCDTip;
+                
+                matSolid.opacity = currentAnimState.baseCubeOp;
+
+                camera.position.lerpVectors(startCam, targetCam, ease);
+
+                if (progress < 1) {
+                    requestAnimationFrame(step);
+                } else {
+                    isAnimating = false;
+                    updateVisibilityBasedOnStep();
+                }
+            }
+            requestAnimationFrame(step);
+        }
+
+        function updateVisibilityBasedOnStep() {
+            labels.I.element.style.display = currentStep >= 1 ? 'block' : 'none';
+            labels.C.element.style.display = currentStep === 0 ? 'block' : 'none';
+            labels.L.element.style.display = currentStep >= 1 ? 'block' : 'none';
+            labels.M.element.style.display = currentStep >= 1 ? 'block' : 'none';
+            labels.P.element.style.display = currentStep >= 2 ? 'block' : 'none';
+            labels.Q.element.style.display = currentStep >= 2 ? 'block' : 'none';
+        }
+
+        window.setStep = function(step) {
+            if (isAnimating) return;
+            currentStep = step;
+            
+            // Update UI buttons
+            for (let i = 0; i < totalSteps; i++) {
+                const btn = document.getElementById(`btn-step-${i}`);
+                const content = document.getElementById(`content-step-${i}`);
+                if (btn && content) {
+                    if (i === currentStep) {
+                        btn.className = "px-4 py-2 text-left rounded border transition-colors btn-active text-sm font-bold";
+                        content.classList.add('active');
+                    } else {
+                        btn.className = "px-4 py-2 text-left rounded border transition-colors btn-inactive text-sm font-bold";
+                        content.classList.remove('active');
+                    }
+                }
+            }
+
+            // Update prev/next buttons
+            document.getElementById('btn-prev').disabled = currentStep === 0;
+            document.getElementById('btn-next').disabled = currentStep === totalSteps - 1;
+            document.getElementById('step-indicator').innerText = `${currentStep + 1} / ${totalSteps}`;
+
+            // Trigger state animation
+            animateToState(stepStates[currentStep]);
+        };
+
+        window.nextStep = function() {
+            if (currentStep < totalSteps - 1) setStep(currentStep + 1);
+        };
+
+        window.prevStep = function() {
+            if (currentStep > 0) setStep(currentStep - 1);
+        };
+
+        function render() {
+            requestAnimationFrame(render);
+            controls.update();
+            renderer.render(scene, camera);
+            labelRenderer.render(scene, camera);
+        }
+
+        window.addEventListener('resize', () => {
+            const width = container.clientWidth;
+            const height = container.clientHeight;
+            renderer.setSize(width, height);
+            labelRenderer.setSize(width, height);
+            camera.aspect = width / height;
+            camera.updateProjectionMatrix();
+        });
+
+        // Initialize display
+        setStep(0);
+        render();
+
+    </script>
+</body>
+</html>
