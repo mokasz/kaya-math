@@ -20,6 +20,13 @@
             transform: translateY(-4px);
             box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
         }
+        @keyframes spin-once {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .spin-anim {
+            animation: spin-once 0.6s ease-in-out;
+        }
     </style>
 </head>
 <body class="bg-gradient-to-br from-slate-50 via-slate-100 to-indigo-50/30 text-slate-800 min-h-screen flex flex-col">
@@ -36,10 +43,16 @@
                     <p class="text-xs text-slate-500">洗足学園 数学・空間図形 3Dインタラクティブ解説</p>
                 </div>
             </div>
-            <a href="https://github.com/mokasz/kaya-math" target="_blank" rel="noopener noreferrer" class="text-xs font-semibold text-slate-500 hover:text-slate-800 flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200/70 px-3 py-1.5 rounded-lg transition-colors">
-                <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
-                <span>GitHub</span>
-            </a>
+            <div class="flex items-center gap-2">
+                <button id="btn-sync" onclick="syncWithGitHub(true)" title="コンテンツ一覧をGitHubから最新取得" class="text-xs font-semibold text-slate-600 hover:text-slate-900 flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200/70 px-3 py-1.5 rounded-lg transition-colors">
+                    <svg id="sync-icon" class="w-3.5 h-3.5 stroke-current" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                    <span id="sync-text">同期</span>
+                </button>
+                <a href="https://github.com/mokasz/kaya-math" target="_blank" rel="noopener noreferrer" class="text-xs font-semibold text-slate-500 hover:text-slate-800 flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200/70 px-3 py-1.5 rounded-lg transition-colors">
+                    <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+                    <span>GitHub</span>
+                </a>
+            </div>
         </div>
     </header>
 
@@ -49,7 +62,7 @@
         <div class="mb-10 text-center sm:text-left">
             <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-bold mb-3 border border-blue-200/60">
                 <span class="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
-                洗足 夏明け復習プリント 3D空間図形
+                洗足学園 数学・3D空間図形解説
             </div>
             <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mb-3">
                 立体の切断・軌跡を3Dで直感的に理解する
@@ -57,12 +70,21 @@
             <p class="text-slate-600 text-sm sm:text-base max-w-2xl leading-relaxed">
                 紙面だけではイメージしづらい複雑な立体の切断面や、球が空間内を移動した際の通過領域を、マウスドラッグによる自由視点とステップアニメーションで視覚的に解説します。
             </p>
+            <div class="mt-4 flex items-center justify-center sm:justify-start gap-3 text-xs text-slate-500">
+                <span id="content-count-badge" class="px-2.5 py-1 rounded-full bg-white border border-slate-200 font-semibold shadow-xs">
+                    全 3 コンテンツ
+                </span>
+                <span id="sync-status-badge" class="flex items-center gap-1.5 text-emerald-600 font-medium">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                    <span>自動同期有効</span>
+                </span>
+            </div>
         </div>
 
         <!-- Problems Grid -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
+        <div id="problems-grid" class="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
             
-            <!-- Card 1: 問題12 -->
+            <!-- Card 1: 夏明け12 -->
             <div class="card-hover bg-white rounded-2xl border border-slate-200/90 shadow-sm p-6 sm:p-7 flex flex-col justify-between">
                 <div>
                     <div class="flex items-center justify-between mb-4">
@@ -94,7 +116,7 @@
                 </a>
             </div>
 
-            <!-- Card 2: 問題17 -->
+            <!-- Card 2: 夏明け17 -->
             <div class="card-hover bg-white rounded-2xl border border-slate-200/90 shadow-sm p-6 sm:p-7 flex flex-col justify-between">
                 <div>
                     <div class="flex items-center justify-between mb-4">
@@ -126,6 +148,38 @@
                 </a>
             </div>
 
+            <!-- Card 3: ２学期中間11 -->
+            <div class="card-hover bg-white rounded-2xl border border-slate-200/90 shadow-sm p-6 sm:p-7 flex flex-col justify-between">
+                <div>
+                    <div class="flex items-center justify-between mb-4">
+                        <span class="px-3 py-1 bg-purple-50 text-purple-700 text-xs font-bold rounded-lg border border-purple-100">
+                            ２学期中間 No.11
+                        </span>
+                        <span class="text-xs text-slate-400 font-medium">Three.js 3D</span>
+                    </div>
+                    
+                    <h3 class="text-xl font-bold text-slate-900 mb-2">
+                        立体図形の切断と体積比
+                    </h3>
+                    
+                    <p class="text-sm text-slate-600 leading-relaxed mb-6">
+                        立方体から三角錐を切り取り回転結合させた立体Vを平面で切断。切り口の面積や、手前・奥の立体の体積比を8段階の3Dステップアニメーションで視覚的に解説。
+                    </p>
+
+                    <div class="flex flex-wrap gap-1.5 mb-6">
+                        <span class="text-[11px] px-2.5 py-1 bg-slate-100 text-slate-600 font-medium rounded-md">空間図形</span>
+                        <span class="text-[11px] px-2.5 py-1 bg-slate-100 text-slate-600 font-medium rounded-md">立体の切断</span>
+                        <span class="text-[11px] px-2.5 py-1 bg-slate-100 text-slate-600 font-medium rounded-md">体積比</span>
+                        <span class="text-[11px] px-2.5 py-1 bg-slate-100 text-slate-600 font-medium rounded-md">ステップ解説</span>
+                    </div>
+                </div>
+
+                <a href="２学期中間11.html" class="w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-sm shadow-md shadow-purple-600/20 hover:shadow-lg hover:shadow-purple-600/30 transition-all">
+                    <span>3D解説アニメーションを見る</span>
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                </a>
+            </div>
+
         </div>
 
         <!-- Hint / Usage Box -->
@@ -148,6 +202,308 @@
             <p class="text-slate-400">Powered by Three.js & Tailwind CSS</p>
         </div>
     </footer>
+
+    <!-- 自動同期・動的カード生成スクリプト -->
+    <script>
+        const REPO_OWNER = 'mokasz';
+        const REPO_NAME = 'kaya-math';
+        const CACHE_KEY = 'kaya_math_contents_v2';
+        const CACHE_TTL_MS = 15 * 60 * 1000; // 15分キャッシュ
+
+        // カラーテーマ一覧（カードごとにローテーション）
+        const THEMES = [
+            {
+                badgeBg: 'bg-blue-50', badgeText: 'text-blue-700', badgeBorder: 'border-blue-100',
+                btnBg: 'bg-blue-600', btnHover: 'hover:bg-blue-700', btnShadow: 'shadow-blue-600/20 hover:shadow-blue-600/30'
+            },
+            {
+                badgeBg: 'bg-indigo-50', badgeText: 'text-indigo-700', badgeBorder: 'border-indigo-100',
+                btnBg: 'bg-indigo-600', btnHover: 'hover:bg-indigo-700', btnShadow: 'shadow-indigo-600/20 hover:shadow-indigo-600/30'
+            },
+            {
+                badgeBg: 'bg-purple-50', badgeText: 'text-purple-700', badgeBorder: 'border-purple-100',
+                btnBg: 'bg-purple-600', btnHover: 'hover:bg-purple-700', btnShadow: 'shadow-purple-600/20 hover:shadow-purple-600/30'
+            },
+            {
+                badgeBg: 'bg-emerald-50', badgeText: 'text-emerald-700', badgeBorder: 'border-emerald-100',
+                btnBg: 'bg-emerald-600', btnHover: 'hover:bg-emerald-700', btnShadow: 'shadow-emerald-600/20 hover:shadow-emerald-600/30'
+            },
+            {
+                badgeBg: 'bg-amber-50', badgeText: 'text-amber-700', badgeBorder: 'border-amber-100',
+                btnBg: 'bg-amber-600', btnHover: 'hover:bg-amber-700', btnShadow: 'shadow-amber-600/20 hover:shadow-amber-600/30'
+            },
+            {
+                badgeBg: 'bg-rose-50', badgeText: 'text-rose-700', badgeBorder: 'border-rose-100',
+                btnBg: 'bg-rose-600', btnHover: 'hover:bg-rose-700', btnShadow: 'shadow-rose-600/20 hover:shadow-rose-600/30'
+            }
+        ];
+
+        // 既知コンテンツのメタデータ（手動で最適化した美しい文面）
+        const KNOWN_METADATA = {
+            '夏明け12': {
+                badge: '夏明け No.12',
+                type: 'Three.js 3D',
+                title: '三角柱の切断と立体の体積',
+                description: '三角柱 $ABC-DEF$ を平面 $DEK$ で切断した立体の体積を解説。切断線の把握から底面の特定、等積変形による求積プロセスを段階ごとに3D表示。',
+                tags: ['空間図形', '三角柱の切断', 'ステップ解説', '計算式連動'],
+                preferredFile: 'natsuake12.html',
+                themeIndex: 0
+            },
+            '夏明け17': {
+                badge: '夏明け No.17',
+                type: 'Interactive 3D',
+                title: '空間内を動く球の通過領域（軌跡）',
+                description: '空間内を一定の規則で移動する球が通過する領域の立体構造（直方体・円柱・球の複合体）を、リアルタイムアニメーションとXYZ軸スライダーで体験。',
+                tags: ['空間図形', '球の通過領域', 'スライダー手動操作', 'MathJax数式'],
+                preferredFile: 'natsuake17.html',
+                themeIndex: 1
+            },
+            '2学期中間11': {
+                badge: '２学期中間 No.11',
+                type: 'Three.js 3D',
+                title: '立体図形の切断と体積比',
+                description: '立方体から三角錐を切り取り回転結合させた立体Vを平面で切断。切り口の面積や、手前・奥の立体の体積比を8段階の3Dステップアニメーションで視覚的に解説。',
+                tags: ['空間図形', '立体の切断', '体積比', 'ステップ解説'],
+                preferredFile: '２学期中間11.html',
+                themeIndex: 2
+            }
+        };
+
+        // ファイル名を正規化してグループ化キーを生成（重複排除用）
+        function normalizeKey(filename) {
+            let key = filename.replace(/\.html$/i, '');
+            // 全角英数を半角に統一
+            key = key.replace(/[！-～]/g, s => String.fromCharCode(s.charCodeAt(0) - 0xFEE0));
+            // natsuake -> 夏明け
+            key = key.replace(/^natsuake/i, '夏明け');
+            return key;
+        }
+
+        // カードのHTMLを生成
+        function createCardHtml(card, theme) {
+            const tagsHtml = card.tags.map(tag => 
+                `<span class="text-[11px] px-2.5 py-1 bg-slate-100 text-slate-600 font-medium rounded-md">${tag}</span>`
+            ).join('');
+
+            return `
+            <div class="card-hover bg-white rounded-2xl border border-slate-200/90 shadow-sm p-6 sm:p-7 flex flex-col justify-between">
+                <div>
+                    <div class="flex items-center justify-between mb-4">
+                        <span class="px-3 py-1 ${theme.badgeBg} ${theme.badgeText} text-xs font-bold rounded-lg border ${theme.badgeBorder}">
+                            ${card.badge}
+                        </span>
+                        <span class="text-xs text-slate-400 font-medium">${card.type || 'Three.js 3D'}</span>
+                    </div>
+                    
+                    <h3 class="text-xl font-bold text-slate-900 mb-2">
+                        ${card.title}
+                    </h3>
+                    
+                    <p class="text-sm text-slate-600 leading-relaxed mb-6">
+                        ${card.description}
+                    </p>
+
+                    <div class="flex flex-wrap gap-1.5 mb-6">
+                        ${tagsHtml}
+                    </div>
+                </div>
+
+                <a href="${encodeURI(card.url)}" class="w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl ${theme.btnBg} ${theme.btnHover} text-white font-bold text-sm shadow-md ${theme.btnShadow} transition-all">
+                    <span>3D解説アニメーションを見る</span>
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                </a>
+            </div>
+            `;
+        }
+
+        // 新規ファイルから自動的にメタデータを抽出
+        async function extractMetadataFromHtml(filename) {
+            try {
+                const res = await fetch(encodeURI(filename));
+                if (!res.ok) throw new Error('Fetch failed');
+                const text = await res.text();
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(text, 'text/html');
+
+                const rawTitle = doc.querySelector('title')?.innerText || '';
+                const h1 = doc.querySelector('h1')?.innerText || '';
+                
+                // タイトルの整形（「〜の解説」等の共通接尾辞を綺麗に整理）
+                let title = h1 || rawTitle || filename.replace(/\.html$/i, '');
+                title = title.replace(/\s*解説アニメーション.*$/, '').trim();
+
+                // 説明文の抽出
+                let description = '';
+                const metaDesc = doc.querySelector('meta[name="description"]')?.content;
+                if (metaDesc) {
+                    description = metaDesc;
+                } else {
+                    const paragraphs = Array.from(doc.querySelectorAll('p'));
+                    for (const p of paragraphs) {
+                        const clean = p.innerText.trim();
+                        if (clean.length > 20 && !clean.includes('アニメーション解説')) {
+                            description = clean;
+                            break;
+                        }
+                    }
+                }
+                if (!description) {
+                    description = `${title}のインタラクティブ3D解説アニメーションです。マウス操作で視点を回転・拡大できます。`;
+                }
+
+                // バッジの自動生成
+                const norm = normalizeKey(filename);
+                const badgeMatch = norm.match(/^(.*?)(?:No\.?)?(\d+)$/);
+                const badge = badgeMatch ? `${badgeMatch[1]} No.${badgeMatch[2]}` : norm;
+
+                return {
+                    badge,
+                    type: text.includes('OrbitControls') ? 'Three.js 3D' : 'Interactive 3D',
+                    title,
+                    description,
+                    tags: ['空間図形', '3Dアニメーション', 'ステップ解説']
+                };
+            } catch (e) {
+                console.warn('Metadata extraction failed for:', filename, e);
+                const norm = normalizeKey(filename);
+                return {
+                    badge: norm,
+                    type: 'Three.js 3D',
+                    title: filename.replace(/\.html$/i, ''),
+                    description: '3D解説アニメーション教材です。',
+                    tags: ['空間図形', '3D解説']
+                };
+            }
+        }
+
+        // GitHub APIから最新一覧を取得して同期
+        async function syncWithGitHub(forceRefresh = false) {
+            const syncIcon = document.getElementById('sync-icon');
+            const syncText = document.getElementById('sync-text');
+            const statusBadge = document.getElementById('sync-status-badge');
+            const countBadge = document.getElementById('content-count-badge');
+            
+            if (syncIcon) syncIcon.classList.add('spin-anim');
+            if (syncText) syncText.textContent = '同期中...';
+
+            try {
+                let fileList = null;
+                const cached = localStorage.getItem(CACHE_KEY);
+
+                if (!forceRefresh && cached) {
+                    try {
+                        const parsed = JSON.parse(cached);
+                        if (Date.now() - parsed.timestamp < CACHE_TTL_MS) {
+                            fileList = parsed.files;
+                        }
+                    } catch (e) {
+                        localStorage.removeItem(CACHE_KEY);
+                    }
+                }
+
+                if (!fileList) {
+                    const res = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents`);
+                    if (!res.ok) {
+                        if (res.status === 403) {
+                            console.warn('GitHub API rate limit reached, using fallback.');
+                            if (statusBadge) statusBadge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span><span>静的キャッシュ表示中</span>';
+                            return;
+                        }
+                        throw new Error(`API error: ${res.status}`);
+                    }
+                    const data = await res.json();
+                    fileList = data
+                        .filter(item => item.type === 'file' && item.name.endsWith('.html') && item.name !== 'index.html')
+                        .map(item => item.name);
+
+                    localStorage.setItem(CACHE_KEY, JSON.stringify({
+                        timestamp: Date.now(),
+                        files: fileList
+                    }));
+                }
+
+                // 重複排除（グループ化）
+                const groups = {};
+                for (const file of fileList) {
+                    const key = normalizeKey(file);
+                    if (!groups[key]) groups[key] = [];
+                    groups[key].push(file);
+                }
+
+                // 各アイテムのカード情報を構築
+                const cardItems = [];
+                let colorIdx = 0;
+
+                for (const [key, files] of Object.entries(groups)) {
+                    // リンクURLの選定（ASCII名を優先、なければ日本語ファイル名）
+                    const asciiFile = files.find(f => /^[\w\-.]+$/.test(f));
+                    const selectedFile = asciiFile || files[0];
+
+                    let meta = KNOWN_METADATA[key];
+                    if (!meta) {
+                        // 未知のファイルはHTML本文から動的抽出
+                        meta = await extractMetadataFromHtml(selectedFile);
+                        meta.themeIndex = colorIdx % THEMES.length;
+                    }
+                    
+                    const theme = THEMES[meta.themeIndex !== undefined ? meta.themeIndex : (colorIdx % THEMES.length)];
+                    colorIdx++;
+
+                    cardItems.push({
+                        key,
+                        url: selectedFile,
+                        badge: meta.badge,
+                        type: meta.type,
+                        title: meta.title,
+                        description: meta.description,
+                        tags: meta.tags,
+                        theme
+                    });
+                }
+
+                // ソート順：既知の順序（夏明け12 -> 夏明け17 -> 2学期中間11 -> その他）
+                const knownOrder = ['夏明け12', '夏明け17', '2学期中間11'];
+                cardItems.sort((a, b) => {
+                    const idxA = knownOrder.indexOf(a.key);
+                    const idxB = knownOrder.indexOf(b.key);
+                    if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+                    if (idxA !== -1) return -1;
+                    if (idxB !== -1) return 1;
+                    return a.key.localeCompare(b.key, 'ja');
+                });
+
+                // グリッドを更新
+                const grid = document.getElementById('problems-grid');
+                if (grid && cardItems.length > 0) {
+                    grid.innerHTML = cardItems.map(item => createCardHtml(item, item.theme)).join('');
+                }
+
+                // カウント更新
+                if (countBadge) {
+                    countBadge.textContent = `全 ${cardItems.length} コンテンツ`;
+                }
+                if (statusBadge) {
+                    statusBadge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span><span>同期完了</span>';
+                }
+
+            } catch (err) {
+                console.error('Sync failed:', err);
+                if (statusBadge) {
+                    statusBadge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span><span>オフライン/既定表示</span>';
+                }
+            } finally {
+                setTimeout(() => {
+                    if (syncIcon) syncIcon.classList.remove('spin-anim');
+                    if (syncText) syncText.textContent = '同期';
+                }, 600);
+            }
+        }
+
+        // ページ読み込み完了時に自動同期を実行
+        window.addEventListener('DOMContentLoaded', () => {
+            syncWithGitHub(false);
+        });
+    </script>
 
 </body>
 </html>
