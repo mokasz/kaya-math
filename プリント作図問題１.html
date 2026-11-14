@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>三角形の垂線の作図</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'M PLUS Rounded 1c', sans-serif;
+            background-color: #f3f4f6;
+        }
+        canvas {
+            touch-action: none;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center py-4 px-4">
+
+    <div class="w-full max-w-4xl">
+        <!-- ヘッダー -->
+        <div class="text-center mb-4">
+            <h1 class="text-2xl md:text-3xl font-bold text-gray-800 mb-2">📐 三角形の垂線の作図</h1>
+            <p class="text-sm md:text-base text-gray-600">問題の(1)と(2)で、2パターンの垂線の作図方法を使い分けよう！</p>
+        </div>
+
+        <!-- タブ切り替え -->
+        <div class="flex justify-center mb-4">
+            <div class="bg-gray-200 p-1 rounded-xl flex flex-col sm:flex-row gap-1">
+                <button onclick="setMode(1)" id="tab-mode-1" class="px-4 py-2 rounded-lg font-bold transition-colors bg-white text-blue-600 shadow-sm text-sm sm:text-base">
+                    (1) 頂点Aから辺BCへの垂線
+                </button>
+                <button onclick="setMode(2)" id="tab-mode-2" class="px-4 py-2 rounded-lg font-bold transition-colors text-gray-600 hover:bg-gray-300 text-sm sm:text-base">
+                    (2) 頂点Bを通る辺ABの垂線
+                </button>
+            </div>
+        </div>
+
+        <!-- キャンバスエリア -->
+        <div class="w-full bg-white p-2 rounded-2xl shadow-xl border border-gray-200 flex justify-center">
+            <canvas id="simCanvas" width="800" height="600" class="w-full max-h-[45vh] object-contain rounded-xl bg-slate-50 block"></canvas>
+        </div>
+
+        <!-- コントロールと説明エリア -->
+        <div class="flex flex-col md:flex-row gap-4 mt-4">
+            <!-- 説明テキスト -->
+            <div class="flex-1 bg-white p-4 rounded-2xl shadow-md border border-gray-200 flex flex-col justify-center min-h-[140px]">
+                <h2 id="step-title" class="text-xl md:text-2xl font-bold text-blue-600 mb-2">読み込み中...</h2>
+                <p id="step-text" class="text-gray-700 text-sm md:text-base leading-relaxed whitespace-pre-wrap"></p>
+            </div>
+
+            <!-- ボタン類 -->
+            <div class="flex flex-col sm:flex-row md:flex-col gap-2 justify-center shrink-0">
+                <button onclick="prevStep()" id="prev-btn" class="w-full sm:w-auto md:w-full px-4 py-2 bg-gray-200 text-gray-700 font-bold rounded-xl hover:bg-gray-300 active:scale-95 disabled:opacity-50 disabled:active:scale-100 transition shadow-sm text-sm">
+                    ＜ 前のステップ
+                </button>
+                <button onclick="togglePlay()" id="play-btn" class="w-full sm:w-auto md:w-full px-6 py-3 bg-blue-500 text-white font-bold rounded-xl hover:bg-blue-600 active:scale-95 shadow-md transition flex items-center justify-center gap-2">
+                    <svg id="icon-play" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    <svg id="icon-pause" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    <span id="play-btn-text" class="text-base">再生</span>
+                </button>
+                <button onclick="nextStep()" id="next-btn" class="w-full sm:w-auto md:w-full px-4 py-2 bg-gray-200 text-gray-700 font-bold rounded-xl hover:bg-gray-300 active:scale-95 disabled:opacity-50 disabled:active:scale-100 transition shadow-sm text-sm">
+                    次のステップ ＞
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('simCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // 問題(1) 頂点Aから辺BCへの垂線
+        const stepsData1 = [
+            { title: "問題(1) : はじめに", text: "「直線外の点(A)から直角に下ろす垂線」の作図です。\n再生を押してスタートしましょう。" },
+            { title: "ステップ 1 : 点Aから弧を描く", text: "コンパスの針を頂点Aに刺します。\n辺BCと2か所で交わるように弧を描きます。" },
+            { title: "ステップ 2 : 交点から弧を描く", text: "直線と弧が交わったところ（点Dとします）に針を刺し、\n辺BCの下側へ適当な大きさで弧を描きます。" },
+            { title: "ステップ 3 : もう一つの交点から弧を描く", text: "コンパスの開き具合を変えずに、もうひとつの交点（点E）に針を刺します。\n先ほど描いた弧と交差するように弧を描き、交点をFとします。" },
+            { title: "ステップ 4 : 垂線を引く", text: "定規を使って、頂点Aと交点Fを結ぶ直線を引きます。\n（辺BCと交わるところまででOKです）" },
+            { title: "完成！", text: "これで「頂点Aから辺BCに引いた垂線」の完成です！" }
+        ];
+
+        // 問題(2) 頂点Bを通る辺ABの垂線
+        const stepsData2 = [
+            { title: "問題(2) : はじめに", text: "「直線上の点(B)を通る垂線」の作図です。\nまず、直線を延長して基準をつくるのがポイントです。" },
+            { title: "ステップ 1 : 辺ABを延長する", text: "定規を使って、辺ABを頂点Bの方向へまっすぐ延長します。" },
+            { title: "ステップ 2 : 点Bから弧を描く", text: "コンパスの針を頂点Bに刺します。\n直線（辺ABとその延長線）と2か所で交わるように弧を描きます。" },
+            { title: "ステップ 3 : 2つの交点から弧を描く", text: "できた2つの交点それぞれに針を刺し、少し長めの半径で弧を描きます。\n（今回は図形の外側、左上あたりに交点をつくります）" },
+            { title: "ステップ 4 : 垂線を引く", text: "定規を使って、頂点Bと2つの弧の交点を結ぶ直線を引きます。" },
+            { title: "完成！", text: "これで「頂点Bを通り、辺ABに垂直な直線」の完成です！" }
+        ];
+
+        let currentMode = 1; 
+        let stepsData = stepsData1;
+        let currentStepIndex = 0; 
+        let stepProgress = 0; 
+        let isPlaying = false;
+        let lastTime = 0;
+
+        function setMode(mode) {
+            currentMode = mode;
+            stepsData = mode === 1 ? stepsData1 : stepsData2;
+            currentStepIndex = 0;
+            stepProgress = 0;
+            isPlaying = false;
+            
+            const tab1 = document.getElementById('tab-mode-1');
+            const tab2 = document.getElementById('tab-mode-2');
+            const activeClass = "px-4 py-2 rounded-lg font-bold transition-colors bg-white text-blue-600 shadow-sm text-sm sm:text-base";
+            const inactiveClass = "px-4 py-2 rounded-lg font-bold transition-colors text-gray-600 hover:bg-gray-300 text-sm sm:text-base";
+            
+            if (mode === 1) {
+                tab1.className = activeClass;
+                tab2.className = inactiveClass;
+            } else {
+                tab2.className = activeClass;
+                tab1.className = inactiveClass;
+            }
+            updateUI();
+            drawScene();
+        }
+
+        function updateUI() {
+            document.getElementById('step-title').innerText = stepsData[currentStepIndex].title;
+            document.getElementById('step-text').innerText = stepsData[currentStepIndex].text;
+            
+            const btnText = document.getElementById('play-btn-text');
+            const iconPlay = document.getElementById('icon-play');
+            const iconPause = document.getElementById('icon-pause');
+            
+            if (isPlaying) {
+                btnText.innerText = "一時停止";
+                iconPlay.classList.add('hidden');
+                iconPause.classList.remove('hidden');
+            } else {
+                if (stepProgress >= 1 && currentStepIndex === stepsData.length - 1) {
+                    btnText.innerText = "最初から見る";
+                } else if (stepProgress >= 1) {
+                    btnText.innerText = "次へ再生";
+                } else {
+                    btnText.innerText = "再生";
+                }
+                iconPlay.classList.remove('hidden');
+                iconPause.classList.add('hidden');
+            }
+            
+            document.getElementById('prev-btn').disabled = (currentStepIndex === 0 && stepProgress === 0);
+            document.getElementById('next-btn').disabled = (currentStepIndex === stepsData.length - 1 && stepProgress >= 1);
+        }
+
+        function nextStep() {
+            if (currentStepIndex < stepsData.length - 1) {
+                currentStepIndex++;
+                stepProgress = 0;
+                isPlaying = true;
+            } else {
+                currentStepIndex = 0;
+                stepProgress = 0;
+                isPlaying = true;
+            }
+            updateUI();
+        }
+
+        function prevStep() {
+            if (currentStepIndex > 0) {
+                if (stepProgress > 0) {
+                    stepProgress = 0;
+                    isPlaying = true;
+                } else {
+                    currentStepIndex--;
+                    stepProgress = 0;
+                    isPlaying = true;
+                }
+            }
+            updateUI();
+        }
+
+        function togglePlay() {
+            if (stepProgress >= 1) {
+                if (currentStepIndex < stepsData.length - 1) {
+                    nextStep();
+                } else {
+                    currentStepIndex = 0;
+                    stepProgress = 0;
+                    isPlaying = true;
+                }
+            } else {
+                isPlaying = !isPlaying;
+            }
+            updateUI();
+        }
+
+        function getPhase(progress, start, end) {
+            if (progress <= start) return 0;
+            if (progress >= end) return 1;
+            return (progress - start) / (end - start);
+        }
+
+        // 描画補助関数
+        function drawRuler(ctx, x, y, length, angle, alpha = 1) {
+            ctx.save();
+            ctx.globalAlpha = alpha;
+            ctx.translate(x, y);
+            ctx.rotate(angle);
+            
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+            ctx.strokeStyle = '#9ca3af';
+            ctx.lineWidth = 1.5;
+            ctx.fillRect(-20, 0, length + 40, 40);
+            ctx.strokeRect(-20, 0, length + 40, 40);
+            
+            ctx.beginPath();
+            for(let i = 0; i <= length; i += 10) {
+                ctx.moveTo(i, 0);
+                ctx.lineTo(i, (i % 50 === 0) ? 15 : 8);
+            }
+            ctx.strokeStyle = '#4b5563';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        function drawCompass(ctx, x, y, radius, drawAngle, alpha = 1) {
+            ctx.save();
+            ctx.globalAlpha = alpha;
+            ctx.translate(x, y);
+            ctx.rotate(drawAngle);
+            
+            const hx = radius / 2;
+            const hy = -150;
+            
+            ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+            
+            ctx.beginPath(); ctx.moveTo(hx, hy); ctx.lineTo(0, 0);
+            ctx.lineWidth = 6; ctx.strokeStyle = '#9ca3af'; ctx.stroke();
+            
+            ctx.beginPath(); ctx.moveTo(hx, hy); ctx.lineTo(radius, 0);
+            ctx.lineWidth = 6; ctx.strokeStyle = '#60a5fa'; ctx.stroke();
+
+            ctx.beginPath(); ctx.moveTo(hx, hy); ctx.lineTo(hx, hy - 35);
+            ctx.lineWidth = 10; ctx.strokeStyle = '#374151'; ctx.stroke();
+            
+            ctx.beginPath(); ctx.arc(hx, hy, 12, 0, Math.PI * 2);
+            ctx.fillStyle = '#d1d5db'; ctx.fill();
+            ctx.lineWidth = 2; ctx.strokeStyle = '#1f2937'; ctx.stroke();
+            
+            ctx.beginPath(); ctx.moveTo(radius - 8, -12); ctx.lineTo(radius, 0); ctx.lineTo(radius - 3, -14);
+            ctx.fillStyle = '#1f2937'; ctx.fill();
+            ctx.restore();
+        }
+
+        // 座標・定数定義
+        const A = { x: 450, y: 150 };
+        const B = { x: 200, y: 350 };
+        const C = { x: 650, y: 350 };
+
+        // --- Mode 1用 ---
+        const r1 = 220; // AからBCへの弧
+        const d_y = 350 - 150; // 200
+        const dx = Math.sqrt(r1*r1 - d_y*d_y); // 91.65
+        const D = { x: A.x - dx, y: 350 };
+        const E = { x: A.x + dx, y: 350 };
+        const r2 = 200; // D, Eからの弧
+        const dy_F = Math.sqrt(r2*r2 - dx*dx); // 177.7
+        const F = { x: A.x, y: 350 + dy_F }; // 527.7
+
+        // --- Mode 2用 ---
+        // ABベクトルと単位ベクトル
+        const vAB = { x: A.x - B.x, y: A.y - B.y }; // (250, -200)
+        const lenAB = Math.sqrt(vAB.x*vAB.x + vAB.y*vAB.y); // 320.15
+        const uAB = { x: vAB.x / lenAB, y: vAB.y / lenAB }; // BからAの方向 (0.78, -0.62)
+        const uExt = { x: -uAB.x, y: -uAB.y }; // 延長方向
+        
+        const r3 = 120; // Bを中心とする弧
+        const G = { x: B.x + r3 * uAB.x, y: B.y + r3 * uAB.y }; // (293.7, 275.0)
+        const H = { x: B.x + r3 * uExt.x, y: B.y + r3 * uExt.y }; // (106.3, 425.0)
+        
+        // 垂線方向 (左上)
+        const vPerp = { x: -uAB.y, y: uAB.x }; // (-(-0.62), 0.78) -> (-0.62, -0.78) (Y軸反転を考慮)
+        const uPerp = { x: uAB.y, y: -uAB.x }; // 実際には左上へ引きたいのでこちら
+        
+        const r4 = 180; // G, Hからの弧
+        const d_BI = Math.sqrt(r4*r4 - r3*r3); // 134.16
+        const I = { x: B.x + d_BI * uPerp.x, y: B.y + d_BI * uPerp.y }; // (116.2, 245.3)
+
+        function drawBackground() {
+            ctx.fillStyle = '#f8fafc';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.strokeStyle = '#e2e8f0'; ctx.lineWidth = 1;
+            for(let i = 0; i < canvas.width; i += 40) {
+                ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, canvas.height); ctx.stroke();
+            }
+            for(let i = 0; i < canvas.height; i += 40) {
+                ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(canvas.width, i); ctx.stroke();
+            }
+        }
+
+        function drawTriangle() {
+            ctx.strokeStyle = '#1f2937';
+            ctx.lineWidth = 3;
+            ctx.lineJoin = 'round';
+            ctx.beginPath();
+            ctx.moveTo(A.x, A.y);
+            ctx.lineTo(B.x, B.y);
+            ctx.lineTo(C.x, C.y);
+            ctx.closePath();
+            ctx.stroke();
+
+            ctx.fillStyle = '#1f2937';
+            ctx.font = "italic 24px 'M PLUS Rounded 1c', sans-serif";
+            ctx.fillText("A", A.x - 5, A.y - 15);
+            ctx.fillText("B", B.x - 25, B.y + 25);
+            ctx.fillText("C", C.x + 10, C.y + 25);
+        }
+
+        function drawScene() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawBackground();
+            
+            if (currentMode === 1) {
+                let p = { arcA: 0, arcD: 0, arcE: 0, lineAF: 0, finish: 0 };
+                for (let i = 1; i <= 5; i++) {
+                    let key = Object.keys(p)[i-1];
+                    if (currentStepIndex > i) p[key] = 1.0;
+                    else if (currentStepIndex === i) p[key] = stepProgress;
+                    else p[key] = 0.0;
+                }
+
+                drawTriangle();
+
+                // 【ステップ1】 頂点Aから弧
+                if (p.arcA > 0) {
+                    let alpha = getPhase(p.arcA, 0, 0.1) - getPhase(p.arcA, 0.9, 1.0);
+                    let arcT = getPhase(p.arcA, 0.1, 0.9);
+                    let startA = Math.PI * 0.2; 
+                    let endA = Math.PI * 0.8;
+                    let currentA = startA + (endA - startA) * arcT;
+                    
+                    ctx.beginPath(); ctx.arc(A.x, A.y, r1, startA, currentA, false);
+                    ctx.strokeStyle = '#3b82f6'; ctx.lineWidth = 2; ctx.stroke();
+                    if (alpha > 0) drawCompass(ctx, A.x, A.y, r1, currentA, alpha);
+
+                    // 交点D, Eのマーク
+                    if (currentStepIndex > 1 || (currentStepIndex === 1 && p.arcA > 0.8)) {
+                        ctx.fillStyle = '#ef4444';
+                        ctx.beginPath(); ctx.arc(D.x, D.y, 4, 0, Math.PI*2); ctx.arc(E.x, E.y, 4, 0, Math.PI*2); ctx.fill();
+                    }
+                }
+
+                // 【ステップ2】 点Dから弧
+                if (p.arcD > 0) {
+                    let alpha = getPhase(p.arcD, 0, 0.1) - getPhase(p.arcD, 0.9, 1.0);
+                    let arcT = getPhase(p.arcD, 0.1, 0.9);
+                    let startA = Math.PI * 0.1; let endA = Math.PI * 0.4;
+                    let currentA = startA + (endA - startA) * arcT;
+                    
+                    ctx.beginPath(); ctx.arc(D.x, D.y, r2, startA, currentA, false);
+                    ctx.strokeStyle = '#3b82f6'; ctx.lineWidth = 2; ctx.stroke();
+                    if (alpha > 0) drawCompass(ctx, D.x, D.y, r2, currentA, alpha);
+                }
+
+                // 【ステップ3】 点Eから弧
+                if (p.arcE > 0) {
+                    let alpha = getPhase(p.arcE, 0, 0.1) - getPhase(p.arcE, 0.9, 1.0);
+                    let arcT = getPhase(p.arcE, 0.1, 0.9);
+                    let startA = Math.PI * 0.9; let endA = Math.PI * 0.6;
+                    let currentA = startA + (endA - startA) * arcT;
+                    
+                    ctx.beginPath(); ctx.arc(E.x, E.y, r2, startA, currentA, true);
+                    ctx.strokeStyle = '#3b82f6'; ctx.lineWidth = 2; ctx.stroke();
+                    if (alpha > 0) drawCompass(ctx, E.x, E.y, r2, currentA, alpha);
+
+                    // 交点F
+                    if (currentStepIndex > 3 || (currentStepIndex === 3 && p.arcE > 0.8)) {
+                        ctx.fillStyle = '#ef4444';
+                        ctx.beginPath(); ctx.arc(F.x, F.y, 4, 0, Math.PI*2); ctx.fill();
+                    }
+                }
+
+                // 【ステップ4】 垂線を引く
+                if (p.lineAF > 0) {
+                    let alpha = getPhase(p.lineAF, 0, 0.15) - getPhase(p.lineAF, 0.85, 1.0);
+                    let lineT = getPhase(p.lineAF, 0.15, 0.85);
+                    
+                    if (alpha > 0) drawRuler(ctx, A.x, 70, 500, Math.PI/2, alpha);
+                    
+                    ctx.beginPath(); ctx.moveTo(A.x, A.y); 
+                    ctx.lineTo(A.x, A.y + (350 - A.y) * lineT);
+                    ctx.strokeStyle = '#10b981'; ctx.lineWidth = 3; ctx.stroke();
+                    
+                    // 補助線(Fまで)
+                    if (lineT > 0.9) {
+                        ctx.beginPath(); ctx.moveTo(A.x, 350); ctx.lineTo(A.x, F.y);
+                        ctx.strokeStyle = '#10b981'; ctx.lineWidth = 1; ctx.setLineDash([4, 4]); ctx.stroke(); ctx.setLineDash([]);
+                    }
+                }
+
+                // 【ステップ5】 完成マーク
+                if (p.finish > 0) {
+                    ctx.globalAlpha = p.finish;
+                    ctx.strokeStyle = '#ef4444'; ctx.lineWidth = 2;
+                    ctx.beginPath(); ctx.moveTo(A.x, 335); ctx.lineTo(A.x + 15, 335); ctx.lineTo(A.x + 15, 350); ctx.stroke();
+                    ctx.globalAlpha = 1;
+                }
+
+            } else {
+                let p = { extAB: 0, arcB: 0, arcGH: 0, lineBI: 0, finish: 0 };
+                for (let i = 1; i <= 5; i++) {
+                    let key = Object.keys(p)[i-1];
+                    if (currentStepIndex > i) p[key] = 1.0;
+                    else if (currentStepIndex === i) p[key] = stepProgress;
+                    else p[key] = 0.0;
+                }
+
+                // 【ステップ1】 延長線を引く (三角形描画前に行い、下に重ねる)
+                if (p.extAB > 0) {
+                    let alpha = getPhase(p.extAB, 0, 0.15) - getPhase(p.extAB, 0.85, 1.0);
+                    let lineT = getPhase(p.extAB, 0.15, 0.85);
+                    let angleAB = Math.atan2(A.y - B.y, A.x - B.x); // BからAの角度
+                    
+                    if (alpha > 0) drawRuler(ctx, B.x, B.y, 160, angleAB + Math.PI, alpha);
+                    
+                    ctx.beginPath(); ctx.moveTo(B.x, B.y);
+                    ctx.lineTo(B.x + 150 * lineT * uExt.x, B.y + 150 * lineT * uExt.y);
+                    ctx.strokeStyle = '#9ca3af'; ctx.lineWidth = 2; ctx.stroke();
+                }
+
+                drawTriangle();
+
+                // 【ステップ2】 点Bから弧
+                if (p.arcB > 0) {
+                    let alpha = getPhase(p.arcB, 0, 0.1) - getPhase(p.arcB, 0.9, 1.0);
+                    let arcT = getPhase(p.arcB, 0.1, 0.9);
+                    let angleAB = Math.atan2(vAB.y, vAB.x);
+                    
+                    // 半円を描く (GからHへ)
+                    let startA = angleAB;
+                    let endA = angleAB - Math.PI;
+                    let currentA = startA + (endA - startA) * arcT;
+                    
+                    ctx.beginPath(); ctx.arc(B.x, B.y, r3, startA, currentA, true);
+                    ctx.strokeStyle = '#3b82f6'; ctx.lineWidth = 2; ctx.stroke();
+                    if (alpha > 0) drawCompass(ctx, B.x, B.y, r3, currentA, alpha);
+
+                    // 交点G, Hのマーク
+                    if (currentStepIndex > 2 || (currentStepIndex === 2 && p.arcB > 0.8)) {
+                        ctx.fillStyle = '#ef4444';
+                        ctx.beginPath(); ctx.arc(G.x, G.y, 4, 0, Math.PI*2); ctx.arc(H.x, H.y, 4, 0, Math.PI*2); ctx.fill();
+                    }
+                }
+
+                // 【ステップ3】 G, Hから弧 (同時描画)
+                if (p.arcGH > 0) {
+                    let p1 = getPhase(p.arcGH, 0, 0.5); // Gから
+                    let p2 = getPhase(p.arcGH, 0.5, 1.0); // Hから
+
+                    let angleGI = Math.atan2(I.y - G.y, I.x - G.x);
+                    if (p1 > 0) {
+                        let alpha = getPhase(p1, 0, 0.2) - getPhase(p1, 0.8, 1.0);
+                        let arcT = getPhase(p1, 0.2, 0.8);
+                        let s = angleGI + 0.3; let e = angleGI - 0.3;
+                        let c = s + (e - s) * arcT;
+                        ctx.beginPath(); ctx.arc(G.x, G.y, r4, s, c, true);
+                        ctx.strokeStyle = '#3b82f6'; ctx.lineWidth = 2; ctx.stroke();
+                        if (alpha > 0) drawCompass(ctx, G.x, G.y, r4, c, alpha);
+                    }
+
+                    let angleHI = Math.atan2(I.y - H.y, I.x - H.x);
+                    if (p2 > 0) {
+                        let alpha = getPhase(p2, 0, 0.2) - getPhase(p2, 0.8, 1.0);
+                        let arcT = getPhase(p2, 0.2, 0.8);
+                        let s = angleHI - 0.3; let e = angleHI + 0.3;
+                        let c = s + (e - s) * arcT;
+                        ctx.beginPath(); ctx.arc(H.x, H.y, r4, s, c, false);
+                        ctx.strokeStyle = '#3b82f6'; ctx.lineWidth = 2; ctx.stroke();
+                        if (alpha > 0) drawCompass(ctx, H.x, H.y, r4, c, alpha);
+                    }
+                    
+                    // 交点I
+                    if (currentStepIndex > 3 || (currentStepIndex === 3 && p.arcGH > 0.9)) {
+                        ctx.fillStyle = '#ef4444'; ctx.beginPath(); ctx.arc(I.x, I.y, 4, 0, Math.PI*2); ctx.fill();
+                    }
+                }
+
+                // 【ステップ4】 垂線を引く
+                if (p.lineBI > 0) {
+                    let alpha = getPhase(p.lineBI, 0, 0.15) - getPhase(p.lineBI, 0.85, 1.0);
+                    let lineT = getPhase(p.lineBI, 0.15, 0.85);
+                    let angleBI = Math.atan2(uPerp.y, uPerp.x);
+                    
+                    // 定規配置
+                    let rulerStart = { x: B.x - 30 * uPerp.x, y: B.y - 30 * uPerp.y };
+                    if (alpha > 0) drawRuler(ctx, rulerStart.x, rulerStart.y, 250, angleBI, alpha);
+                    
+                    ctx.beginPath(); ctx.moveTo(B.x, B.y);
+                    ctx.lineTo(B.x + 200 * lineT * uPerp.x, B.y + 200 * lineT * uPerp.y);
+                    ctx.strokeStyle = '#10b981'; ctx.lineWidth = 3; ctx.stroke();
+                }
+
+                // 【ステップ5】 完成マーク
+                if (p.finish > 0) {
+                    ctx.globalAlpha = p.finish;
+                    ctx.strokeStyle = '#ef4444'; ctx.lineWidth = 2;
+                    let L = 15;
+                    ctx.beginPath();
+                    ctx.moveTo(B.x + L * uAB.x, B.y + L * uAB.y);
+                    ctx.lineTo(B.x + L * uAB.x + L * uPerp.x, B.y + L * uAB.y + L * uPerp.y);
+                    ctx.lineTo(B.x + L * uPerp.x, B.y + L * uPerp.y);
+                    ctx.stroke();
+                    ctx.globalAlpha = 1;
+                }
+            }
+        }
+
+        function loop(timestamp) {
+            if (!lastTime) lastTime = timestamp;
+            let dt = timestamp - lastTime;
+            lastTime = timestamp;
+
+            if (isPlaying) {
+                let duration = 2500;
+                if (currentMode === 1) {
+                    if (currentStepIndex === 1) duration = 2500;
+                    if (currentStepIndex === 2 || currentStepIndex === 3) duration = 2500;
+                    if (currentStepIndex === 4) duration = 2000;
+                    if (currentStepIndex === 5) duration = 1500;
+                } else {
+                    if (currentStepIndex === 1) duration = 2000;
+                    if (currentStepIndex === 2) duration = 2500;
+                    if (currentStepIndex === 3) duration = 3500; // 2つの弧を描くため長め
+                    if (currentStepIndex === 4) duration = 2000;
+                    if (currentStepIndex === 5) duration = 1500;
+                }
+
+                if (currentStepIndex > 0) {
+                    stepProgress += dt / duration;
+                    if (stepProgress >= 1.0) {
+                        stepProgress = 1.0;
+                        isPlaying = false;
+                    }
+                }
+                updateUI();
+            }
+
+            drawScene();
+            requestAnimationFrame(loop);
+        }
+
+        window.onload = () => {
+            updateUI();
+            requestAnimationFrame(loop);
+        };
+    </script>
+</body>
+</html>

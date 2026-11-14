@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>75°の角の作図（別解：45°＋30°）</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'M PLUS Rounded 1c', sans-serif;
+            background-color: #f3f4f6;
+        }
+        canvas {
+            touch-action: none;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center py-6 px-4">
+
+    <div class="w-full max-w-4xl">
+        <!-- ヘッダー -->
+        <div class="text-center mb-4">
+            <h1 class="text-2xl md:text-3xl font-bold text-gray-800 mb-2">📐 75°の角の作図（別解）</h1>
+            <p class="text-sm md:text-base text-gray-600">45°を作図し、その隣に30°を作図して足す（45°＋30°＝75°）方法で描いてみよう！</p>
+        </div>
+
+        <!-- キャンバスエリア -->
+        <div class="w-full bg-white p-2 rounded-2xl shadow-xl border border-gray-200 flex justify-center">
+            <canvas id="simCanvas" width="800" height="600" class="w-full max-h-[50vh] object-contain rounded-xl bg-slate-50 block"></canvas>
+        </div>
+
+        <!-- コントロールと説明エリア -->
+        <div class="flex flex-col md:flex-row gap-4 mt-4">
+            <!-- 説明テキスト -->
+            <div class="flex-1 bg-white p-4 rounded-2xl shadow-md border border-gray-200 flex flex-col justify-center min-h-[140px]">
+                <h2 id="step-title" class="text-xl md:text-2xl font-bold text-blue-600 mb-2">読み込み中...</h2>
+                <p id="step-text" class="text-gray-700 text-sm md:text-base leading-relaxed whitespace-pre-wrap"></p>
+            </div>
+
+            <!-- ボタン類 -->
+            <div class="flex flex-col sm:flex-row md:flex-col gap-2 justify-center shrink-0">
+                <button onclick="prevStep()" id="prev-btn" class="w-full sm:w-auto md:w-full px-4 py-2 bg-gray-200 text-gray-700 font-bold rounded-xl hover:bg-gray-300 active:scale-95 disabled:opacity-50 disabled:active:scale-100 transition shadow-sm text-sm">
+                    ＜ 前のステップ
+                </button>
+                <button onclick="togglePlay()" id="play-btn" class="w-full sm:w-auto md:w-full px-6 py-3 bg-blue-500 text-white font-bold rounded-xl hover:bg-blue-600 active:scale-95 shadow-md transition flex items-center justify-center gap-2">
+                    <svg id="icon-play" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    <svg id="icon-pause" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    <span id="play-btn-text" class="text-base">再生</span>
+                </button>
+                <button onclick="nextStep()" id="next-btn" class="w-full sm:w-auto md:w-full px-4 py-2 bg-gray-200 text-gray-700 font-bold rounded-xl hover:bg-gray-300 active:scale-95 disabled:opacity-50 disabled:active:scale-100 transition shadow-sm text-sm">
+                    次のステップ ＞
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('simCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const stepsData = [
+            { title: "はじめに", text: "45°の角を作り、その隣に30°の角を作って足し合わせる（45°＋30°＝75°）方法で作図します。\n手順が多いので、線の色に注目して進めましょう。" },
+            { title: "ステップ 1 : 90°の作図 (垂線)", text: "線分ABを左に延長し、点Aを通る垂線を引きます。\n（点Aから弧を描き、2つの交点からさらに弧を描いて垂線を引きます）" },
+            { title: "ステップ 2 : 45°の作図 (角の二等分線)", text: "90°の角を二等分して、45°を作ります。\n交点からそれぞれ青色の弧を描き、点Aから45°の直線を引きます。" },
+            { title: "ステップ 3 : 45°の線から60°を作る準備", text: "引いた45°の直線を基準にして、その隣に60°を作ります。\n点Aからオレンジ色の弧を描き、交点から同じ半径で弧を描きます。" },
+            { title: "ステップ 4 : 60°の補助線を引く", text: "できた交点を通る補助線（点線）を引きます。\nこれで45°のとなりに60°の角ができました。" },
+            { title: "ステップ 5 : 60°を二等分する (30°の作図)", text: "隣に作った60°の角を二等分して30°にします。\n2つの交点から、それぞれ紫色の弧を描きます。" },
+            { title: "ステップ 6 : 75°の直線を引く", text: "定規を使って、交点を通る直線を引きます。\n（45°の隣に30°の角がくっつきました）" },
+            { title: "完成！", text: "45°と30°を足し合わせることで、75°の角が作れました！\n直線上の適当なところに点Cをとれば、∠BAC = 75°の完成です。" }
+        ];
+
+        let currentStepIndex = 0; 
+        let stepProgress = 0; 
+        let isPlaying = false;
+        let lastTime = 0;
+
+        function updateUI() {
+            document.getElementById('step-title').innerText = stepsData[currentStepIndex].title;
+            document.getElementById('step-text').innerText = stepsData[currentStepIndex].text;
+            
+            const btnText = document.getElementById('play-btn-text');
+            const iconPlay = document.getElementById('icon-play');
+            const iconPause = document.getElementById('icon-pause');
+            
+            if (isPlaying) {
+                btnText.innerText = "一時停止";
+                iconPlay.classList.add('hidden');
+                iconPause.classList.remove('hidden');
+            } else {
+                if (stepProgress >= 1 && currentStepIndex === stepsData.length - 1) {
+                    btnText.innerText = "最初から見る";
+                } else if (stepProgress >= 1) {
+                    btnText.innerText = "次へ再生";
+                } else {
+                    btnText.innerText = "再生";
+                }
+                iconPlay.classList.remove('hidden');
+                iconPause.classList.add('hidden');
+            }
+            
+            document.getElementById('prev-btn').disabled = (currentStepIndex === 0 && stepProgress === 0);
+            document.getElementById('next-btn').disabled = (currentStepIndex === stepsData.length - 1 && stepProgress >= 1);
+        }
+
+        function nextStep() {
+            if (currentStepIndex < stepsData.length - 1) {
+                currentStepIndex++;
+                stepProgress = 0;
+                isPlaying = true;
+            } else {
+                currentStepIndex = 0;
+                stepProgress = 0;
+                isPlaying = true;
+            }
+            updateUI();
+        }
+
+        function prevStep() {
+            if (currentStepIndex > 0) {
+                if (stepProgress > 0) {
+                    stepProgress = 0;
+                    isPlaying = true;
+                } else {
+                    currentStepIndex--;
+                    stepProgress = 0;
+                    isPlaying = true;
+                }
+            }
+            updateUI();
+        }
+
+        function togglePlay() {
+            if (stepProgress >= 1) {
+                if (currentStepIndex < stepsData.length - 1) {
+                    nextStep();
+                } else {
+                    currentStepIndex = 0;
+                    stepProgress = 0;
+                    isPlaying = true;
+                }
+            } else {
+                isPlaying = !isPlaying;
+            }
+            updateUI();
+        }
+
+        function getPhase(progress, start, end) {
+            if (progress <= start) return 0;
+            if (progress >= end) return 1;
+            return (progress - start) / (end - start);
+        }
+
+        function drawRuler(ctx, x, y, length, angle, alpha = 1) {
+            ctx.save();
+            ctx.globalAlpha = alpha;
+            ctx.translate(x, y);
+            ctx.rotate(angle);
+            
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+            ctx.strokeStyle = '#9ca3af';
+            ctx.lineWidth = 1.5;
+            ctx.fillRect(-20, 0, length + 40, 40);
+            ctx.strokeRect(-20, 0, length + 40, 40);
+            
+            ctx.beginPath();
+            for(let i = 0; i <= length; i += 10) {
+                ctx.moveTo(i, 0);
+                ctx.lineTo(i, (i % 50 === 0) ? 15 : 8);
+            }
+            ctx.strokeStyle = '#4b5563';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        function drawCompass(ctx, x, y, radius, drawAngle, alpha = 1) {
+            ctx.save();
+            ctx.globalAlpha = alpha;
+            ctx.translate(x, y);
+            ctx.rotate(drawAngle);
+            
+            const hx = radius / 2;
+            const hy = -150;
+            
+            ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+            
+            ctx.beginPath(); ctx.moveTo(hx, hy); ctx.lineTo(0, 0);
+            ctx.lineWidth = 6; ctx.strokeStyle = '#9ca3af'; ctx.stroke();
+            
+            ctx.beginPath(); ctx.moveTo(hx, hy); ctx.lineTo(radius, 0);
+            ctx.lineWidth = 6; ctx.strokeStyle = '#60a5fa'; ctx.stroke();
+
+            ctx.beginPath(); ctx.moveTo(hx, hy); ctx.lineTo(hx, hy - 35);
+            ctx.lineWidth = 10; ctx.strokeStyle = '#374151'; ctx.stroke();
+            
+            ctx.beginPath(); ctx.arc(hx, hy, 12, 0, Math.PI * 2);
+            ctx.fillStyle = '#d1d5db'; ctx.fill();
+            ctx.lineWidth = 2; ctx.strokeStyle = '#1f2937'; ctx.stroke();
+            
+            ctx.beginPath(); ctx.moveTo(radius - 8, -12); ctx.lineTo(radius, 0); ctx.lineTo(radius - 3, -14);
+            ctx.fillStyle = '#1f2937'; ctx.fill();
+            ctx.restore();
+        }
+
+        function drawBackground() {
+            ctx.fillStyle = '#f8fafc';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.strokeStyle = '#e2e8f0'; ctx.lineWidth = 1;
+            for(let i = 0; i < canvas.width; i += 40) {
+                ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, canvas.height); ctx.stroke();
+            }
+            for(let i = 0; i < canvas.height; i += 40) {
+                ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(canvas.width, i); ctx.stroke();
+            }
+        }
+
+        // 座標・定数定義
+        const A = { x: 300, y: 500 };
+        const B = { x: 700, y: 500 };
+        
+        // ステップ1: 90°の作図
+        const r90_1 = 120;
+        const P1 = { x: A.x - r90_1, y: A.y };
+        const P2 = { x: A.x + r90_1, y: A.y };
+        const r90_2 = 200;
+        const P3 = { x: A.x, y: A.y - Math.sqrt(r90_2*r90_2 - r90_1*r90_1) }; // 垂線の交点
+        const angle90 = -Math.PI / 2;
+
+        // ステップ2: 45°の作図
+        const r45 = 160;
+        const Q1 = { x: A.x + r90_1, y: A.y }; // P2と同じ
+        const Q2 = { x: A.x, y: A.y - r90_1 }; // 垂線と弧の交点
+        // 幾何学的な交点Q3
+        const distQ3 = r90_1 * Math.cos(Math.PI/4) + Math.sqrt(r45*r45 - Math.pow(r90_1*Math.sin(Math.PI/4), 2));
+        const angle45 = -Math.PI / 4;
+        const Q3 = { x: A.x + distQ3 * Math.cos(angle45), y: A.y + distQ3 * Math.sin(angle45) };
+
+        // ステップ3 & 4: 60°の作図 (45°基準)
+        const r60 = 220;
+        const R1 = { x: A.x + r60 * Math.cos(angle45), y: A.y + r60 * Math.sin(angle45) };
+        const angle105 = angle45 - Math.PI / 3; // -45 - 60 = -105度
+        const R2 = { x: A.x + r60 * Math.cos(angle105), y: A.y + r60 * Math.sin(angle105) };
+
+        // ステップ5 & 6: 30°の作図 (60°を二等分)
+        const r30 = 180;
+        const angle75 = angle45 - Math.PI / 6; // -45 - 30 = -75度
+        const distS = r60 * Math.cos(Math.PI/6) + Math.sqrt(r30*r30 - Math.pow(r60*Math.sin(Math.PI/6), 2));
+        const S = { x: A.x + distS * Math.cos(angle75), y: A.y + distS * Math.sin(angle75) };
+
+        function drawScene() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawBackground();
+
+            // ベースの線分ABと点A
+            ctx.strokeStyle = '#1f2937'; ctx.lineWidth = 3;
+            ctx.beginPath(); ctx.moveTo(A.x, A.y); ctx.lineTo(B.x, B.y); ctx.stroke();
+            
+            ctx.fillStyle = '#1f2937'; ctx.font = "italic 24px 'M PLUS Rounded 1c', sans-serif";
+            ctx.beginPath(); ctx.arc(A.x, A.y, 4, 0, Math.PI*2); ctx.fill();
+            ctx.fillText("A", A.x - 20, A.y + 25);
+            ctx.beginPath(); ctx.arc(B.x, B.y, 4, 0, Math.PI*2); ctx.fill();
+            ctx.fillText("B", B.x + 10, B.y + 25);
+
+            let p = { step1: 0, step2: 0, step3: 0, step4: 0, step5: 0, step6: 0, finish: 0 };
+            for (let i = 1; i <= 7; i++) {
+                let key = Object.keys(p)[i-1];
+                if (currentStepIndex > i) p[key] = 1.0;
+                else if (currentStepIndex === i) p[key] = stepProgress;
+                else p[key] = 0.0;
+            }
+
+            // 【ステップ1】 90°の作図 (グレー色)
+            if (p.step1 > 0) {
+                let p1 = getPhase(p.step1, 0, 0.2); // 延長線
+                let p2 = getPhase(p.step1, 0.2, 0.5); // Aから弧
+                let p3 = getPhase(p.step1, 0.5, 0.8); // 2交点から弧
+                let p4 = getPhase(p.step1, 0.8, 1.0); // 垂線
+                
+                if (p1 > 0) {
+                    ctx.beginPath(); ctx.moveTo(A.x, A.y); ctx.lineTo(A.x - 200 * p1, A.y);
+                    ctx.strokeStyle = '#9ca3af'; ctx.lineWidth = 2; ctx.setLineDash([4, 4]); ctx.stroke(); ctx.setLineDash([]);
+                }
+                if (p2 > 0) {
+                    let arcT = getPhase(p2, 0.1, 0.9);
+                    let s = 10 * Math.PI/180; let e = -190 * Math.PI/180;
+                    ctx.beginPath(); ctx.arc(A.x, A.y, r90_1, s, s + (e-s)*arcT, true);
+                    ctx.strokeStyle = '#9ca3af'; ctx.lineWidth = 2; ctx.stroke();
+                }
+                if (p3 > 0) {
+                    let arcT1 = getPhase(p3, 0.1, 0.5);
+                    if (arcT1 > 0) {
+                        let s = -30 * Math.PI/180; let e = -80 * Math.PI/180;
+                        ctx.beginPath(); ctx.arc(P1.x, P1.y, r90_2, s, s + (e-s)*arcT1, true);
+                        ctx.strokeStyle = '#9ca3af'; ctx.lineWidth = 2; ctx.stroke();
+                    }
+                    let arcT2 = getPhase(p3, 0.5, 0.9);
+                    if (arcT2 > 0) {
+                        let s = -150 * Math.PI/180; let e = -100 * Math.PI/180;
+                        ctx.beginPath(); ctx.arc(P2.x, P2.y, r90_2, s, s + (e-s)*arcT2, false);
+                        ctx.strokeStyle = '#9ca3af'; ctx.lineWidth = 2; ctx.stroke();
+                    }
+                }
+                if (p4 > 0) {
+                    ctx.beginPath(); ctx.moveTo(A.x, A.y); ctx.lineTo(A.x, A.y - 350 * p4);
+                    ctx.strokeStyle = '#9ca3af'; ctx.lineWidth = 2; ctx.stroke();
+                }
+            }
+
+            // 【ステップ2】 45°の作図 (青色)
+            if (p.step2 > 0) {
+                let p1 = getPhase(p.step2, 0, 0.4); // Q1から
+                let p2 = getPhase(p.step2, 0.4, 0.8); // Q2から
+                let p3 = getPhase(p.step2, 0.8, 1.0); // 線分
+                
+                let angleQ1toQ3 = Math.atan2(Q3.y - Q1.y, Q3.x - Q1.x);
+                let angleQ2toQ3 = Math.atan2(Q3.y - Q2.y, Q3.x - Q2.x);
+
+                if (p1 > 0) {
+                    let alpha = getPhase(p1, 0, 0.2) - getPhase(p1, 0.8, 1.0);
+                    let arcT = getPhase(p1, 0.2, 0.8);
+                    let s = angleQ1toQ3 + 0.3; let e = angleQ1toQ3 - 0.3;
+                    let c = s + (e - s) * arcT;
+                    ctx.beginPath(); ctx.arc(Q1.x, Q1.y, r45, s, c, true);
+                    ctx.strokeStyle = '#3b82f6'; ctx.lineWidth = 2; ctx.stroke();
+                    if (alpha > 0) drawCompass(ctx, Q1.x, Q1.y, r45, c, alpha);
+                }
+                if (p2 > 0) {
+                    let alpha = getPhase(p2, 0, 0.2) - getPhase(p2, 0.8, 1.0);
+                    let arcT = getPhase(p2, 0.2, 0.8);
+                    let s = angleQ2toQ3 - 0.3; let e = angleQ2toQ3 + 0.3;
+                    let c = s + (e - s) * arcT;
+                    ctx.beginPath(); ctx.arc(Q2.x, Q2.y, r45, s, c, false);
+                    ctx.strokeStyle = '#3b82f6'; ctx.lineWidth = 2; ctx.stroke();
+                    if (alpha > 0) drawCompass(ctx, Q2.x, Q2.y, r45, c, alpha);
+                }
+                if (p3 > 0) {
+                    let alpha = getPhase(p3, 0, 0.15) - getPhase(p3, 0.85, 1.0);
+                    let lineT = getPhase(p3, 0.15, 0.85);
+                    if (alpha > 0) drawRuler(ctx, A.x, A.y, 400, angle45, alpha);
+                    
+                    ctx.beginPath(); ctx.moveTo(A.x, A.y);
+                    ctx.lineTo(A.x + 450 * lineT * Math.cos(angle45), A.y + 450 * lineT * Math.sin(angle45));
+                    ctx.strokeStyle = '#10b981'; ctx.lineWidth = 2; ctx.stroke(); // 45°線は緑
+                }
+            }
+
+            // 【ステップ3】 60°の準備 (オレンジ色)
+            if (p.step3 > 0) {
+                let p1 = getPhase(p.step3, 0, 0.5); // Aから
+                let p2 = getPhase(p.step3, 0.5, 1.0); // R1から
+                
+                if (p1 > 0) {
+                    let alpha = getPhase(p1, 0, 0.2) - getPhase(p1, 0.8, 1.0);
+                    let arcT = getPhase(p1, 0.2, 0.8);
+                    let s = angle45 + 0.1; let e = angle105 - 0.3;
+                    let c = s + (e - s) * arcT;
+                    ctx.beginPath(); ctx.arc(A.x, A.y, r60, s, c, true);
+                    ctx.strokeStyle = '#f59e0b'; ctx.lineWidth = 2; ctx.stroke();
+                    if (alpha > 0) drawCompass(ctx, A.x, A.y, r60, c, alpha);
+                }
+                if (p2 > 0) {
+                    let alpha = getPhase(p2, 0, 0.2) - getPhase(p2, 0.8, 1.0);
+                    let arcT = getPhase(p2, 0.2, 0.8);
+                    let angleR1toR2 = Math.atan2(R2.y - R1.y, R2.x - R1.x);
+                    let s = angleR1toR2 + 0.3; let e = angleR1toR2 - 0.3;
+                    let c = s + (e - s) * arcT;
+                    ctx.beginPath(); ctx.arc(R1.x, R1.y, r60, s, c, true);
+                    ctx.strokeStyle = '#f59e0b'; ctx.lineWidth = 2; ctx.stroke();
+                    if (alpha > 0) drawCompass(ctx, R1.x, R1.y, r60, c, alpha);
+                }
+            }
+
+            // 【ステップ4】 60°の補助線を引く
+            if (p.step4 > 0) {
+                let alpha = getPhase(p.step4, 0, 0.15) - getPhase(p.step4, 0.85, 1.0);
+                let lineT = getPhase(p.step4, 0.15, 0.85);
+                if (alpha > 0) drawRuler(ctx, A.x, A.y, 350, angle105, alpha);
+                
+                ctx.beginPath(); ctx.moveTo(A.x, A.y);
+                ctx.lineTo(A.x + 350 * lineT * Math.cos(angle105), A.y + 350 * lineT * Math.sin(angle105));
+                ctx.strokeStyle = '#f59e0b'; ctx.lineWidth = 2; ctx.setLineDash([6, 4]); ctx.stroke(); ctx.setLineDash([]);
+            }
+
+            // 【ステップ5】 30°の作図 (紫色)
+            if (p.step5 > 0) {
+                let p1 = getPhase(p.step5, 0, 0.5); // R1から
+                let p2 = getPhase(p.step5, 0.5, 1.0); // R2から
+                
+                let angleR1toS = Math.atan2(S.y - R1.y, S.x - R1.x);
+                let angleR2toS = Math.atan2(S.y - R2.y, S.x - R2.x);
+
+                if (p1 > 0) {
+                    let alpha = getPhase(p1, 0, 0.2) - getPhase(p1, 0.8, 1.0);
+                    let arcT = getPhase(p1, 0.2, 0.8);
+                    let s = angleR1toS + 0.3; let e = angleR1toS - 0.3;
+                    let c = s + (e - s) * arcT;
+                    ctx.beginPath(); ctx.arc(R1.x, R1.y, r30, s, c, true);
+                    ctx.strokeStyle = '#a855f7'; ctx.lineWidth = 2; ctx.stroke(); // 紫色
+                    if (alpha > 0) drawCompass(ctx, R1.x, R1.y, r30, c, alpha);
+                }
+                if (p2 > 0) {
+                    let alpha = getPhase(p2, 0, 0.2) - getPhase(p2, 0.8, 1.0);
+                    let arcT = getPhase(p2, 0.2, 0.8);
+                    let s = angleR2toS - 0.3; let e = angleR2toS + 0.3;
+                    let c = s + (e - s) * arcT;
+                    ctx.beginPath(); ctx.arc(R2.x, R2.y, r30, s, c, false);
+                    ctx.strokeStyle = '#a855f7'; ctx.lineWidth = 2; ctx.stroke();
+                    if (alpha > 0) drawCompass(ctx, R2.x, R2.y, r30, c, alpha);
+                }
+            }
+
+            // 【ステップ6】 75°の直線を引く
+            if (p.step6 > 0) {
+                let alpha = getPhase(p.step6, 0, 0.15) - getPhase(p.step6, 0.85, 1.0);
+                let lineT = getPhase(p.step6, 0.15, 0.85);
+                if (alpha > 0) drawRuler(ctx, A.x, A.y, 450, angle75, alpha);
+                
+                ctx.beginPath(); ctx.moveTo(A.x, A.y);
+                let endX = A.x + 450 * lineT * Math.cos(angle75);
+                let endY = A.y + 450 * lineT * Math.sin(angle75);
+                ctx.lineTo(endX, endY);
+                ctx.strokeStyle = '#ef4444'; ctx.lineWidth = 3; ctx.stroke(); // 完成線は赤で強調
+                
+                if (lineT >= 0.9 || currentStepIndex > 6) {
+                    ctx.fillStyle = '#1f2937'; ctx.beginPath(); ctx.arc(A.x + 350 * Math.cos(angle75), A.y + 350 * Math.sin(angle75), 4, 0, Math.PI*2); ctx.fill();
+                    ctx.fillText("C", A.x + 350 * Math.cos(angle75) - 20, A.y + 350 * Math.sin(angle75) - 15);
+                }
+            }
+
+            // 【ステップ7】 完成
+            if (p.finish > 0) {
+                ctx.globalAlpha = p.finish;
+                // 45°と30°を明示
+                ctx.beginPath(); ctx.arc(A.x, A.y, 70, 0, angle45, true);
+                ctx.strokeStyle = '#10b981'; ctx.lineWidth = 2; ctx.stroke();
+                ctx.fillStyle = '#10b981'; ctx.font = "bold 18px sans-serif"; ctx.fillText("45°", A.x + 80, A.y - 30);
+                
+                ctx.beginPath(); ctx.arc(A.x, A.y, 90, angle45, angle75, true);
+                ctx.strokeStyle = '#f59e0b'; ctx.lineWidth = 2; ctx.stroke();
+                ctx.fillStyle = '#f59e0b'; ctx.fillText("30°", A.x + 30, A.y - 95);
+
+                // 全体の75°
+                ctx.beginPath(); ctx.arc(A.x, A.y, 40, 0, angle75, true);
+                ctx.strokeStyle = '#ef4444'; ctx.lineWidth = 3; ctx.stroke();
+                ctx.fillStyle = '#ef4444'; ctx.font = "bold 22px sans-serif"; ctx.fillText("75°", A.x + 45, A.y - 15);
+                
+                ctx.globalAlpha = 1;
+            }
+        }
+
+        function loop(timestamp) {
+            if (!lastTime) lastTime = timestamp;
+            let dt = timestamp - lastTime;
+            lastTime = timestamp;
+
+            if (isPlaying) {
+                let duration = 2500;
+                if (currentStepIndex === 1) duration = 4000; // 90度（工程多め）
+                if (currentStepIndex === 2) duration = 3500; // 45度
+                if (currentStepIndex === 3) duration = 3500; // 60度準備
+                if (currentStepIndex === 4) duration = 2000; // 60度線
+                if (currentStepIndex === 5) duration = 3500; // 30度
+                if (currentStepIndex === 6) duration = 2000; // 75度線
+                if (currentStepIndex === 7) duration = 1500; // 完成
+
+                if (currentStepIndex > 0) {
+                    stepProgress += dt / duration;
+                    if (stepProgress >= 1.0) {
+                        stepProgress = 1.0;
+                        isPlaying = false;
+                    }
+                }
+                updateUI();
+            }
+
+            drawScene();
+            requestAnimationFrame(loop);
+        }
+
+        window.onload = () => {
+            updateUI();
+            requestAnimationFrame(loop);
+        };
+    </script>
+</body>
+</html>
