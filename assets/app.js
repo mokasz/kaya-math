@@ -200,6 +200,8 @@
     }
 
     // ===== Filtering & Sorting =====
+    const naturalJaCollator = new Intl.Collator('ja', { numeric: true, sensitivity: 'base' });
+
     function stripNoSuffix(label) {
         return (label || '').replace(/\s*No\.?[0-9０-９]+.*$/i, '').trim();
     }
@@ -232,7 +234,16 @@
         } else if (state.sort === 'oldest') {
             items.sort((a, b) => new Date(a.published_at) - new Date(b.published_at));
         } else if (state.sort === 'title') {
-            items.sort((a, b) => (a.title || '').localeCompare(b.title || '', 'ja'));
+            items.sort((a, b) => {
+                const labelA = (a.badge || getItemCategory(a) || '').normalize('NFKC');
+                const labelB = (b.badge || getItemCategory(b) || '').normalize('NFKC');
+                const labelCmp = naturalJaCollator.compare(labelA, labelB);
+                if (labelCmp !== 0) return labelCmp;
+                return naturalJaCollator.compare(
+                    (a.title || '').normalize('NFKC'),
+                    (b.title || '').normalize('NFKC')
+                );
+            });
         }
         return items;
     }
