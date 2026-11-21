@@ -866,15 +866,17 @@ body.viewer-body {
   background: #0f172a;
   color: #f1f5f9;
   height: 100vh;
+  height: 100dvh;
+  min-height: 0;
   overflow: hidden;
 }
 
 .viewer-header {
-  height: 3rem;
+  min-height: 3rem;
   flex-shrink: 0;
   background: #0f172a;
   border-bottom: 1px solid #334155;
-  padding: 0 1rem;
+  padding: env(safe-area-inset-top, 0px) max(0.75rem, env(safe-area-inset-right, 0px)) 0 max(0.75rem, env(safe-area-inset-left, 0px));
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -900,6 +902,13 @@ body.viewer-body {
   font-size: 0.78rem;
   font-weight: 700;
   flex-shrink: 0;
+  touch-action: manipulation;
+}
+
+@media (pointer: coarse) {
+  .viewer-back {
+    min-height: 44px;
+  }
 }
 
 .viewer-back:hover {
@@ -935,10 +944,14 @@ body.viewer-body {
 }
 
 .viewer-main {
-  flex: 1;
+  flex: 1 1 0%;
+  min-height: 0;
   position: relative;
   background: #fff;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
 
 .viewer-frame {

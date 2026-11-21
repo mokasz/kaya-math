@@ -18,6 +18,7 @@
         "base-uri 'none'",
     ].join('; ');
 
+    const viewerMain = document.querySelector('.viewer-main');
     const frame = document.getElementById('viewer-frame');
     const loadingEl = document.getElementById('loading-state');
     const errorEl = document.getElementById('error-state');
@@ -27,10 +28,24 @@
     const badgeEl = document.getElementById('page-badge');
     const dateEl = document.getElementById('page-date');
 
-    // iframe 内の「TOP一覧へ戻る」リンク(index.html 等)を親ページ遷移へ橋渡し
+    function syncFrameHeight(msg) {
+        if (!viewerMain || !frame) return;
+        if (msg.fixed) {
+            frame.style.height = '100%';
+            return;
+        }
+        const minHeight = viewerMain.clientHeight;
+        const target = Number(msg.height) || 0;
+        frame.style.height = target > minHeight + 2 ? `${Math.ceil(target)}px` : '100%';
+    }
+
+    // iframe 内の「TOP一覧へ戻る」リンクおよびコンテンツ高さ通知を親へ橋渡し
     window.addEventListener('message', (event) => {
-        if (event.source === frame.contentWindow && event.data && event.data.type === 'kaya-math-back') {
+        if (event.source !== frame.contentWindow || event.origin !== 'null' || !event.data) return;
+        if (event.data.type === 'kaya-math-back') {
             window.location.href = './';
+        } else if (event.data.type === 'kaya-math-height') {
+            syncFrameHeight(event.data);
         }
     });
 
@@ -48,26 +63,174 @@
         return `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`;
     }
 
-    // sandbox iframe 内の CSP 注入と、index.html 戻りリンクの橋渡しスクリプト注入
+    // 先生配布の作図テンプレート特有の再生・描画不具合をランタイム表示時に自動補正する
+    function patchSakuzuTemplateRuntime(html) {
+        if (!html.includes('function togglePlay()') || !html.includes('function loop(')) {
+            return html;
+        }
+
+        let out = html;
+
+        // 1. ステップ0(はじめに)や最終ステップからの再生開始時にステップ1へ進めて即再生するよう補正
+        out = out.replace(
+            /function nextStep\(\)\s*\{[\s\S]*?updateUI\(\);\s*\}/,
+            `function nextStep() {
+            if (currentStepIndex < stepsData.length - 1) {
+                currentStepIndex++;
+            } else {
+                currentStepIndex = stepsData.length > 1 ? 1 : 0;
+            }
+            stepProgress = 0;
+            isPlaying = true;
+            lastTime = performance.now();
+            updateUI();
+        }`
+        );
+
+        out = out.replace(
+            /function prevStep\(\)\s*\{[\s\S]*?updateUI\(\);\s*\}/,
+            `function prevStep() {
+            if (currentStepIndex > 0) {
+                if (stepProgress > 0) {
+                    stepProgress = 0;
+                    isPlaying = true;
+                } else {
+                    currentStepIndex--;
+                    stepProgress = 0;
+                    isPlaying = currentStepIndex > 0;
+                }
+                lastTime = performance.now();
+            }
+            updateUI();
+        }`
+        );
+
+        out = out.replace(
+            /function togglePlay\(\)\s*\{[\s\S]*?updateUI\(\);\s*\}/,
+            `function togglePlay() {
+            if (stepProgress >= 1) {
+                if (currentStepIndex < stepsData.length - 1) {
+                    nextStep();
+                    return;
+                } else {
+                    currentStepIndex = stepsData.length > 1 ? 1 : 0;
+                    stepProgress = 0;
+                    isPlaying = true;
+                    lastTime = performance.now();
+                }
+            } else if (currentStepIndex === 0) {
+                nextStep();
+                return;
+            } else {
+                isPlaying = !isPlaying;
+                if (isPlaying) lastTime = performance.now();
+            }
+            updateUI();
+        }`
+        );
+
+        // 2. loop内のdtクランプと毎フレームupdateUI()連打によるiOSタップ取りこぼしを防止
+        out = out.replace(
+            'let dt = timestamp - lastTime;',
+            'let dt = Math.min(Math.max(timestamp - lastTime, 0), 100);'
+        );
+
+        out = out.replace(
+            /if\s*\(currentStepIndex > 0\)\s*\{\s*stepProgress \+= dt \/ duration;\s*if\s*\(stepProgress >= 1\.0\)\s*\{\s*stepProgress = 1\.0;\s*isPlaying = false;[^\n]*\n\s*\}\s*\}\s*updateUI\(\);/,
+            `if (currentStepIndex > 0) {
+                    stepProgress += dt / duration;
+                    if (stepProgress >= 1.0) {
+                        stepProgress = 1.0;
+                        isPlaying = false;
+                        updateUI();
+                    }
+                }`
+        );
+
+        // 3. 外部フォント等の読込待ちをせずDOM準備完了で即初期化
+        out = out.replace(
+            /window\.onload\s*=\s*\(\)\s*=>\s*\{\s*updateUI\(\);\s*requestAnimationFrame\(loop\);\s*\};/,
+            `function __kayaInitApp() { updateUI(); requestAnimationFrame(loop); }
+        if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', __kayaInitApp); } else { __kayaInitApp(); }`
+        );
+
+        return out;
+    }
+
+    // sandbox iframe 内の CSP 注入、iOS スクロール・高さ同期、および index.html 戻りリンク橋渡しを注入
     function prepareHtmlForViewer(rawHtml) {
         const cspMeta = `<meta http-equiv="Content-Security-Policy" content="${SRCDOC_CSP}">`;
-        const bridgeScript = `<script>
-document.addEventListener('click', function(e) {
-  var a = e.target && e.target.closest ? e.target.closest('a[href]') : null;
-  if (!a) return;
-  var href = (a.getAttribute('href') || '').trim();
-  if (href === 'index.html' || href === './index.html' || href === './' || href === '/') {
-    e.preventDefault();
-    window.parent.postMessage({ type: 'kaya-math-back' }, '*');
+        const mobileSafeStyle = `<style>
+@media (pointer: coarse) {
+  button, [role="button"] { min-height: 44px; touch-action: manipulation; }
+}
+button {
+  touch-action: manipulation;
+}
+body.min-h-screen {
+  min-height: 100% !important;
+  min-height: 100dvh !important;
+  justify-content: safe center !important;
+  padding-top: 0.75rem !important;
+  padding-bottom: max(1.25rem, env(safe-area-inset-bottom, 0px)) !important;
+}
+@media (max-width: 639px) {
+  body.min-h-screen canvas#simCanvas {
+    max-height: 38dvh !important;
+    object-fit: contain !important;
   }
-}, true);
+}
+</style>`;
+        const bridgeScript = `<script>
+(function() {
+  document.addEventListener('click', function(e) {
+    var a = e.target && e.target.closest ? e.target.closest('a[href]') : null;
+    if (!a) return;
+    var href = (a.getAttribute('href') || '').trim();
+    if (href === 'index.html' || href === './index.html' || href === './' || href === '/') {
+      e.preventDefault();
+      window.parent.postMessage({ type: 'kaya-math-back' }, '*');
+    }
+  }, true);
+
+  function measureAndPost() {
+    if (!document.body) return;
+    var cs = getComputedStyle(document.body);
+    if (cs.overflowY === 'hidden' || document.body.classList.contains('h-screen')) {
+      window.parent.postMessage({ type: 'kaya-math-height', fixed: true }, '*');
+      return;
+    }
+    var bodyRect = document.body.getBoundingClientRect();
+    var padBottom = parseFloat(cs.paddingBottom) || 0;
+    var maxBottom = 0;
+    for (var i = 0; i < document.body.children.length; i++) {
+      var child = document.body.children[i];
+      var style = getComputedStyle(child);
+      if (style.position === 'fixed' || style.display === 'none') continue;
+      var rect = child.getBoundingClientRect();
+      var b = rect.bottom - bodyRect.top + (parseFloat(style.marginBottom) || 0);
+      if (b > maxBottom) maxBottom = b;
+    }
+    var contentHeight = Math.max(maxBottom + padBottom, 0);
+    window.parent.postMessage({ type: 'kaya-math-height', fixed: false, height: contentHeight }, '*');
+  }
+
+  window.addEventListener('DOMContentLoaded', measureAndPost);
+  window.addEventListener('load', measureAndPost);
+  window.addEventListener('resize', measureAndPost);
+  if (typeof ResizeObserver !== 'undefined') {
+    var ro = new ResizeObserver(measureAndPost);
+    ro.observe(document.documentElement);
+  }
+  setTimeout(measureAndPost, 300);
+})();
 <\/script>`;
 
-        let html = rawHtml;
+        let html = patchSakuzuTemplateRuntime(rawHtml);
         if (/<head[^>]*>/i.test(html)) {
-            html = html.replace(/<head[^>]*>/i, (match) => match + cspMeta);
+            html = html.replace(/<head[^>]*>/i, (match) => match + cspMeta + mobileSafeStyle);
         } else {
-            html = cspMeta + html;
+            html = cspMeta + mobileSafeStyle + html;
         }
 
         const matches = [...html.matchAll(/<\/body>/gi)];
