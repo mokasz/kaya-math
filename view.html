@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net data:; img-src 'self' data: blob:; connect-src 'self' https://uzpmpjkkwapaohleejtt.supabase.co; child-src 'self'; frame-src 'self'; object-src 'none'; base-uri 'self';">
+    <title>Kaya's Math Studio | コンテンツビューア</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Noto+Sans+JP:wght@400;500;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./assets/styles.css">
+    <script src="./assets/supabase.min.js" defer></script>
+    <script src="./assets/viewer.js" defer></script>
+</head>
+<body class="viewer-body">
+
+    <!-- Top Navigation Bar -->
+    <header class="viewer-header">
+        <div class="viewer-left">
+            <a href="./" class="viewer-back">
+                <svg class="icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/></svg>
+                <span>一覧へ戻る</span>
+            </a>
+            <span id="page-badge" class="viewer-badge hidden"></span>
+            <h1 id="page-title" class="viewer-title">読み込み中...</h1>
+        </div>
+        <span id="page-date" class="viewer-date"></span>
+    </header>
+
+    <!-- Main Viewer Area -->
+    <main class="viewer-main">
+        <div id="loading-state" class="viewer-overlay">
+            <div class="spinner"></div>
+            <p>教材を読み込んでいます...</p>
+        </div>
+
+        <div id="error-state" class="viewer-overlay hidden">
+            <div class="drop-zone-icon">📐</div>
+            <h2 id="error-title" class="state-box-title">教材が見つかりませんでした</h2>
+            <p id="error-desc" class="state-box-sub"></p>
+            <a href="./" class="btn btn-primary">
+                一覧ページへ戻る
+            </a>
+        </div>
+
+        <!--
+          セキュリティ対策（F-03）:
+          sandbox="allow-scripts" のみに限定し、allow-same-origin / allow-top-navigation /
+          allow-popups / allow-modals / allow-forms をすべて禁止、referrerpolicy="no-referrer" を付与。
+        -->
+        <iframe
+            id="viewer-frame"
+            class="viewer-frame"
+            sandbox="allow-scripts"
+            referrerpolicy="no-referrer"
+            title="教材ビューア"
+        ></iframe>
+    </main>
+</body>
+</html>
