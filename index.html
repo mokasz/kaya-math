@@ -150,14 +150,10 @@
                     <p id="file-status-text" class="drop-zone-sub">1ファイルあたり最大 5MB まで（タイトルや説明を自動抽出します）</p>
                 </div>
 
-                <!-- Bulk Upload Section (2+ files) -->
+                <!-- Upload Queue Section (Upload mode) -->
                 <div id="bulk-section" class="bulk-section hidden">
                     <div class="bulk-header">
                         <span id="bulk-summary" class="bulk-summary"></span>
-                        <label class="bulk-date-wrap">
-                            <span>一括日付:</span>
-                            <input id="bulk-date" type="date" class="field-input bulk-date-input">
-                        </label>
                     </div>
                     <div id="bulk-dup-notice" class="dup-notice hidden">
                         <p>すでに登録済みのファイル名が含まれています（重複時の処理）：</p>
@@ -179,23 +175,8 @@
                     <div id="bulk-list" class="bulk-list"></div>
                 </div>
 
-                <!-- Single File / Edit Fields -->
-                <div id="single-fields" class="single-fields">
-                    <!-- Duplicate Filename Warning -->
-                    <div id="duplicate-notice" class="dup-notice hidden">
-                        <p>同じファイル名（<span id="duplicate-slug-label"></span>）がすでに登録されています。</p>
-                        <div class="dup-options">
-                            <label>
-                                <input type="radio" name="dup-mode" value="overwrite" checked>
-                                <span>既存を上書き更新する（日付も新しくする）</span>
-                            </label>
-                            <label>
-                                <input type="radio" name="dup-mode" value="rename">
-                                <span>別名で新規追加する</span>
-                            </label>
-                        </div>
-                    </div>
-
+                <!-- Edit Fields (Edit mode only) -->
+                <div id="single-fields" class="single-fields hidden">
                     <div class="form-grid-2">
                         <div>
                             <label for="field-slug" class="field-label">ファイル名（識別子）<span class="required-mark">*</span></label>
