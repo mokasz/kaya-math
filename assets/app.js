@@ -61,7 +61,8 @@
     const fieldDate = document.getElementById('field-date');
     const fieldTitle = document.getElementById('field-title');
     const fieldBadge = document.getElementById('field-badge');
-    const fieldTags = document.getElementById('field-tags');
+    const fieldTag = document.getElementById('field-tag');
+    const tagPresetsEl = document.getElementById('tag-presets');
     const fieldDesc = document.getElementById('field-desc');
     const modalError = document.getElementById('modal-error');
     const btnSubmitModal = document.getElementById('btn-submit-modal');
@@ -199,12 +200,20 @@
     }
 
     // ===== Filtering & Sorting =====
+    function stripNoSuffix(label) {
+        return (label || '').replace(/\s*No\.?[0-9０-９]+.*$/i, '').trim();
+    }
+
+    function getItemCategory(item) {
+        const firstTag = Array.isArray(item.tags) && item.tags[0] ? String(item.tags[0]).trim() : '';
+        return firstTag || stripNoSuffix(item.badge);
+    }
+
     function getFilteredPages() {
         const q = state.search.trim().toLowerCase();
         let items = state.pages.filter((p) => {
             if (state.selectedTag !== 'ALL') {
-                const tags = Array.isArray(p.tags) ? p.tags : [];
-                if (!tags.includes(state.selectedTag)) return false;
+                if (getItemCategory(p) !== state.selectedTag) return false;
             }
             if (!q) return true;
             const haystack = [
@@ -231,8 +240,9 @@
     function renderTagFilters() {
         const tagCounts = new Map();
         for (const p of state.pages) {
-            for (const t of (p.tags || [])) {
-                tagCounts.set(t, (tagCounts.get(t) || 0) + 1);
+            const cat = getItemCategory(p);
+            if (cat) {
+                tagCounts.set(cat, (tagCounts.get(cat) || 0) + 1);
             }
         }
         const sortedTags = Array.from(tagCounts.entries())
@@ -338,10 +348,11 @@
                 dateSpan.textContent = formatDateDisplay(item.published_at);
                 topLine.appendChild(dateSpan);
 
-                if (item.badge) {
+                const badgeLabel = item.badge || getItemCategory(item);
+                if (badgeLabel) {
                     const badgeSpan = document.createElement('span');
                     badgeSpan.className = 'item-badge';
-                    badgeSpan.textContent = item.badge;
+                    badgeSpan.textContent = badgeLabel;
                     topLine.appendChild(badgeSpan);
                 }
 
@@ -352,22 +363,6 @@
                 topLine.appendChild(titleLink);
 
                 left.appendChild(topLine);
-
-                const subLine = document.createElement('div');
-                subLine.className = 'list-sub';
-
-                const slugSpan = document.createElement('span');
-                slugSpan.className = 'item-slug';
-                slugSpan.textContent = item.slug;
-                subLine.appendChild(slugSpan);
-
-                for (const tag of (item.tags || [])) {
-                    const tagSpan = document.createElement('span');
-                    tagSpan.className = 'item-tag';
-                    tagSpan.textContent = tag;
-                    subLine.appendChild(tagSpan);
-                }
-                left.appendChild(subLine);
 
                 row.appendChild(left);
                 row.appendChild(createActionButtons(item));
@@ -389,7 +384,7 @@
 
                 const badgeSpan = document.createElement('span');
                 badgeSpan.className = 'item-badge';
-                badgeSpan.textContent = item.badge || '教材';
+                badgeSpan.textContent = item.badge || getItemCategory(item) || '教材';
                 metaTop.appendChild(badgeSpan);
 
                 const dateSpan = document.createElement('span');
@@ -411,22 +406,8 @@
                     body.appendChild(descEl);
                 }
 
-                const tagsWrap = document.createElement('div');
-                tagsWrap.className = 'card-tags';
-                for (const tag of (item.tags || [])) {
-                    const tagSpan = document.createElement('span');
-                    tagSpan.className = 'item-tag';
-                    tagSpan.textContent = tag;
-                    tagsWrap.appendChild(tagSpan);
-                }
-                body.appendChild(tagsWrap);
-
                 const footer = document.createElement('div');
                 footer.className = 'card-footer';
-                const slugSpan = document.createElement('span');
-                slugSpan.className = 'item-slug';
-                slugSpan.textContent = item.slug;
-                footer.appendChild(slugSpan);
                 footer.appendChild(createActionButtons(item));
 
                 card.appendChild(body);
@@ -479,21 +460,59 @@
             }
         }
 
-        const tags = [];
-        if (filename.includes('作図') || title.includes('作図')) tags.push('作図');
-        if (htmlText.includes('OrbitControls') || /\bthree(?:\.min)?\.js\b|\bTHREE\./i.test(htmlText)) tags.push('空間図形', '3D');
-        if (tags.length === 0) tags.push('数学');
-
         let badge = '';
+        let tag = '';
+        const stem = filename.replace(/\.html?$/i, '').trim();
         const sakuzuMatch = filename.match(/プリント作図問題([0-9０-９]+)(.*)\.html?$/);
+        const natsuakeMatch = filename.match(/^(?:natsuake|夏明け)([0-9０-９]+)(.*)\.html?$/i);
+        const genericNumMatch = stem.match(/^([^\d０-９]+?)([0-9０-９]+)(.*)$/);
+
         if (sakuzuMatch) {
             const num = sakuzuMatch[1].replace(/[０-９]/g, (s) => String.fromCharCode(s.charCodeAt(0) - 0xFEE0));
-            badge = `作図プリント No.${num}${sakuzuMatch[2] || ''}`;
-        } else if (filename.includes('作図')) {
+            badge = `プリント作図 No.${num}${sakuzuMatch[2] || ''}`;
+            tag = 'プリント作図';
+        } else if (natsuakeMatch) {
+            const num = natsuakeMatch[1].replace(/[０-９]/g, (s) => String.fromCharCode(s.charCodeAt(0) - 0xFEE0));
+            badge = `夏明け No.${num}${natsuakeMatch[2] || ''}`;
+            tag = '夏明け';
+        } else if (filename.includes('作図') || title.includes('作図')) {
             badge = '基本作図';
+            tag = '基本作図';
+        } else if (genericNumMatch) {
+            const prefix = genericNumMatch[1].trim();
+            const num = genericNumMatch[2].replace(/[０-９]/g, (s) => String.fromCharCode(s.charCodeAt(0) - 0xFEE0));
+            badge = `${prefix} No.${num}${genericNumMatch[3] || ''}`;
+            tag = prefix;
+        } else {
+            tag = 'その他';
         }
 
+        const tags = tag ? [tag] : [];
         return { title, badge, description, tags };
+    }
+
+    function renderTagPresets() {
+        const presetSet = new Set(['プリント作図', '基本作図', '夏明け', '２学期中間']);
+        for (const p of state.pages) {
+            const cat = getItemCategory(p);
+            if (cat) presetSet.add(cat);
+        }
+        const current = fieldTag.value.trim();
+        tagPresetsEl.replaceChildren();
+        for (const label of presetSet) {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = current === label ? 'badge-preset-btn active' : 'badge-preset-btn';
+            btn.textContent = label;
+            btn.addEventListener('click', () => {
+                fieldTag.value = label;
+                if (!fieldBadge.value.trim()) {
+                    fieldBadge.value = label;
+                }
+                renderTagPresets();
+            });
+            tagPresetsEl.appendChild(btn);
+        }
     }
 
     function normalizeSlug(raw) {
@@ -577,11 +596,12 @@
                 const slugSpan = document.createElement('span');
                 slugSpan.textContent = `${entry.slug} (${Math.round(entry.fileSize / 1024)} KB)`;
                 metaEl.appendChild(slugSpan);
-                for (const t of entry.tags) {
-                    const tagSpan = document.createElement('span');
-                    tagSpan.className = 'item-tag';
-                    tagSpan.textContent = t;
-                    metaEl.appendChild(tagSpan);
+                const labelText = entry.badge || (entry.tags && entry.tags[0]);
+                if (labelText) {
+                    const badgeSpan = document.createElement('span');
+                    badgeSpan.className = 'item-badge';
+                    badgeSpan.textContent = labelText;
+                    metaEl.appendChild(badgeSpan);
                 }
             }
             info.appendChild(metaEl);
@@ -636,10 +656,11 @@
             fieldSlug.value = entry.slug;
             fieldTitle.value = entry.title;
             fieldBadge.value = entry.badge;
-            fieldTags.value = entry.tags.join(', ');
+            fieldTag.value = (entry.tags && entry.tags[0]) || '';
             fieldDesc.value = entry.description;
             fieldDate.value = toDateInputValue(new Date().toISOString());
             btnSubmitModal.textContent = 'アップロードして公開';
+            renderTagPresets();
             checkDuplicateSlug();
         }
     }
@@ -706,6 +727,7 @@
         fieldSlug.disabled = false;
         fieldDate.value = toDateInputValue(new Date().toISOString());
         fileStatusText.textContent = '1ファイルあたり最大 5MB まで（タイトルや説明を自動抽出します）';
+        renderTagPresets();
         duplicateNotice.classList.add('hidden');
         modalError.classList.add('hidden');
         editorModal.classList.remove('hidden');
@@ -725,10 +747,11 @@
         fieldSlug.disabled = true;
         fieldTitle.value = item.title || '';
         fieldBadge.value = item.badge || '';
-        fieldTags.value = (item.tags || []).join(', ');
+        fieldTag.value = getItemCategory(item);
         fieldDesc.value = item.description || '';
         fieldDate.value = toDateInputValue(item.published_at);
         fileStatusText.textContent = 'HTMLファイルを差し替える場合のみ新しいファイルを選択してください（任意）';
+        renderTagPresets();
         duplicateNotice.classList.add('hidden');
         modalError.classList.add('hidden');
         editorModal.classList.remove('hidden');
@@ -742,6 +765,7 @@
     document.getElementById('btn-close-modal').addEventListener('click', closeModal);
     document.getElementById('btn-cancel-modal').addEventListener('click', closeModal);
     fieldSlug.addEventListener('input', checkDuplicateSlug);
+    fieldTag.addEventListener('input', renderTagPresets);
 
     dropZone.addEventListener('click', () => {
         fileInput.value = '';
@@ -860,14 +884,10 @@
             modalError.classList.remove('hidden');
             return;
         }
-        const badge = fieldBadge.value.trim();
+        const tag = fieldTag.value.trim();
+        const badge = fieldBadge.value.trim() || tag;
         const description = fieldDesc.value.trim();
-        const tags = Array.from(new Set(
-            fieldTags.value
-                .split(/[,、]/)
-                .map((t) => t.trim())
-                .filter(Boolean)
-        ));
+        const tags = tag ? [tag] : (stripNoSuffix(badge) ? [stripNoSuffix(badge)] : []);
         const publishedAt = (
             state.editingItem && fieldDate.value === toDateInputValue(state.editingItem.published_at)
         )
