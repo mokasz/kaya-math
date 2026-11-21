@@ -18,6 +18,7 @@
         viewMode: localStorage.getItem(VIEW_MODE_KEY) === 'card' ? 'card' : 'list',
         editingItem: null,
         pendingHtmlContent: null,
+        bulkItems: [],
     };
 
     // DOM Elements
@@ -48,6 +49,12 @@
     const dropZone = document.getElementById('drop-zone');
     const fileInput = document.getElementById('file-input');
     const fileStatusText = document.getElementById('file-status-text');
+    const singleFields = document.getElementById('single-fields');
+    const bulkSection = document.getElementById('bulk-section');
+    const bulkSummary = document.getElementById('bulk-summary');
+    const bulkDate = document.getElementById('bulk-date');
+    const bulkDupNotice = document.getElementById('bulk-dup-notice');
+    const bulkList = document.getElementById('bulk-list');
     const duplicateNotice = document.getElementById('duplicate-notice');
     const duplicateSlugLabel = document.getElementById('duplicate-slug-label');
     const fieldSlug = document.getElementById('field-slug');
@@ -521,46 +528,184 @@
         return `${stem}-${idx}${ext}`;
     }
 
-    async function handleSelectedFile(file) {
-        modalError.classList.add('hidden');
-        if (!file) return;
-        if (!/\.html?$/i.test(file.name) && file.type !== 'text/html') {
-            modalError.textContent = 'HTMLファイル（.html / .htm）を選択してください。';
-            modalError.classList.remove('hidden');
-            return;
-        }
-        if (file.size > MAX_FILE_BYTES) {
-            modalError.textContent = 'ファイルサイズが大きすぎます（上限 5MB）。';
-            modalError.classList.remove('hidden');
-            return;
-        }
+    function setSingleModeUI(isSingle) {
+        singleFields.classList.toggle('hidden', !isSingle);
+        bulkSection.classList.toggle('hidden', isSingle);
+        fieldSlug.required = isSingle;
+        fieldDate.required = isSingle;
+        fieldTitle.required = isSingle;
+    }
 
-        const text = await file.text();
-        state.pendingHtmlContent = text;
-        const cleanName = file.name.normalize('NFC');
-        fileStatusText.textContent = `選択済み: ${cleanName} (${Math.round(file.size / 1024)} KB)`;
+    function renderBulkList() {
+        const existingSlugs = new Set(state.pages.map((p) => p.slug));
+        const seenBatch = new Set();
+        let validCount = 0;
+        let dupCount = 0;
+        let errCount = 0;
 
+        bulkList.replaceChildren();
+
+        state.bulkItems.forEach((entry, idx) => {
+            if (entry.error) {
+                errCount++;
+            } else {
+                const isDup = existingSlugs.has(entry.slug) || seenBatch.has(entry.slug);
+                entry.isDuplicate = isDup;
+                seenBatch.add(entry.slug);
+                validCount++;
+                if (isDup) dupCount++;
+            }
+
+            const row = document.createElement('div');
+            row.className = 'bulk-row';
+
+            const info = document.createElement('div');
+            info.className = 'bulk-row-info';
+
+            const titleEl = document.createElement('div');
+            titleEl.className = 'bulk-row-title';
+            titleEl.textContent = entry.error ? entry.rawName : entry.title;
+            info.appendChild(titleEl);
+
+            const metaEl = document.createElement('div');
+            metaEl.className = 'bulk-row-meta';
+            if (entry.error) {
+                const errSpan = document.createElement('span');
+                errSpan.textContent = entry.error;
+                metaEl.appendChild(errSpan);
+            } else {
+                const slugSpan = document.createElement('span');
+                slugSpan.textContent = `${entry.slug} (${Math.round(entry.fileSize / 1024)} KB)`;
+                metaEl.appendChild(slugSpan);
+                for (const t of entry.tags) {
+                    const tagSpan = document.createElement('span');
+                    tagSpan.className = 'item-tag';
+                    tagSpan.textContent = t;
+                    metaEl.appendChild(tagSpan);
+                }
+            }
+            info.appendChild(metaEl);
+
+            const statusBadge = document.createElement('span');
+            if (entry.error) {
+                statusBadge.className = 'bulk-status bulk-status-err';
+                statusBadge.textContent = '対象外';
+            } else if (entry.isDuplicate) {
+                statusBadge.className = 'bulk-status bulk-status-dup';
+                statusBadge.textContent = '重複あり';
+            } else {
+                statusBadge.className = 'bulk-status bulk-status-new';
+                statusBadge.textContent = '新規';
+            }
+
+            const removeBtn = document.createElement('button');
+            removeBtn.type = 'button';
+            removeBtn.className = 'bulk-remove-btn';
+            removeBtn.textContent = '除外';
+            removeBtn.addEventListener('click', () => {
+                state.bulkItems.splice(idx, 1);
+                if (state.bulkItems.length === 1 && !state.bulkItems[0].error) {
+                    applySingleParsedItem(state.bulkItems[0]);
+                    state.bulkItems = [];
+                } else if (state.bulkItems.length === 0) {
+                    setSingleModeUI(true);
+                    fileStatusText.textContent = '1ファイルあたり最大 5MB まで（タイトルや説明を自動抽出します）';
+                    btnSubmitModal.textContent = 'アップロードして公開';
+                } else {
+                    renderBulkList();
+                }
+            });
+
+            row.appendChild(info);
+            row.appendChild(statusBadge);
+            row.appendChild(removeBtn);
+            bulkList.appendChild(row);
+        });
+
+        bulkDupNotice.classList.toggle('hidden', dupCount === 0);
+        bulkSummary.textContent = `選択: ${state.bulkItems.length} 件（登録対象 ${validCount} 件${dupCount ? `・重複 ${dupCount} 件` : ''}${errCount ? `・エラー ${errCount} 件` : ''}）`;
+        fileStatusText.textContent = `${state.bulkItems.length} 件のファイルを選択中`;
+        btnSubmitModal.textContent = `${validCount} 件をまとめてアップロード`;
+    }
+
+    function applySingleParsedItem(entry) {
+        setSingleModeUI(true);
+        state.pendingHtmlContent = entry.htmlContent;
+        fileStatusText.textContent = `選択済み: ${entry.slug} (${Math.round(entry.fileSize / 1024)} KB)`;
         if (!state.editingItem) {
-            fieldSlug.value = cleanName;
-            const meta = extractMetadataFromHtmlText(cleanName, text);
-            fieldTitle.value = meta.title;
-            fieldBadge.value = meta.badge;
-            fieldTags.value = meta.tags.join(', ');
-            fieldDesc.value = meta.description;
+            fieldSlug.value = entry.slug;
+            fieldTitle.value = entry.title;
+            fieldBadge.value = entry.badge;
+            fieldTags.value = entry.tags.join(', ');
+            fieldDesc.value = entry.description;
             fieldDate.value = toDateInputValue(new Date().toISOString());
+            btnSubmitModal.textContent = 'アップロードして公開';
             checkDuplicateSlug();
         }
+    }
+
+    async function parseHtmlFile(file) {
+        const rawName = file.name.normalize('NFC');
+        if (!/\.html?$/i.test(file.name) && file.type !== 'text/html') {
+            return { rawName, error: 'HTMLファイル（.html / .htm）ではありません' };
+        }
+        if (file.size > MAX_FILE_BYTES) {
+            return { rawName, error: '5MBの上限を超えています' };
+        }
+        const htmlContent = await file.text();
+        const slug = normalizeSlug(rawName);
+        const meta = extractMetadataFromHtmlText(slug, htmlContent);
+        return {
+            rawName,
+            slug,
+            htmlContent,
+            fileSize: new Blob([htmlContent]).size,
+            title: meta.title,
+            badge: meta.badge,
+            tags: meta.tags,
+            description: meta.description,
+            error: null,
+        };
+    }
+
+    async function handleSelectedFiles(fileList) {
+        modalError.classList.add('hidden');
+        const files = Array.from(fileList || []);
+        if (files.length === 0) return;
+
+        if (state.editingItem || files.length === 1) {
+            state.bulkItems = [];
+            const entry = await parseHtmlFile(files[0]);
+            if (entry.error) {
+                modalError.textContent = `${entry.rawName}: ${entry.error}`;
+                modalError.classList.remove('hidden');
+                return;
+            }
+            applySingleParsedItem(entry);
+            return;
+        }
+
+        const parsed = await Promise.all(files.map(parseHtmlFile));
+        state.pendingHtmlContent = null;
+        state.bulkItems = parsed;
+        setSingleModeUI(false);
+        bulkDate.value = toDateInputValue(new Date().toISOString());
+        renderBulkList();
     }
 
     function openUploadModal() {
         state.editingItem = null;
         state.pendingHtmlContent = null;
-        modalHeading.textContent = '新しいHTMLをアップロード';
+        state.bulkItems = [];
+        fileInput.multiple = true;
+        fileInput.value = '';
+        modalHeading.textContent = 'HTMLファイルをアップロード（複数選択可）';
         btnSubmitModal.textContent = 'アップロードして公開';
         editorForm.reset();
+        setSingleModeUI(true);
         fieldSlug.disabled = false;
         fieldDate.value = toDateInputValue(new Date().toISOString());
-        fileStatusText.textContent = '最大 5MB まで（タイトルや説明を自動抽出します）';
+        fileStatusText.textContent = '1ファイルあたり最大 5MB まで（タイトルや説明を自動抽出します）';
         duplicateNotice.classList.add('hidden');
         modalError.classList.add('hidden');
         editorModal.classList.remove('hidden');
@@ -569,9 +714,13 @@
     function openEditModal(item) {
         state.editingItem = item;
         state.pendingHtmlContent = null;
+        state.bulkItems = [];
+        fileInput.multiple = false;
+        fileInput.value = '';
         modalHeading.textContent = '教材情報を編集';
         btnSubmitModal.textContent = '変更を保存';
         editorForm.reset();
+        setSingleModeUI(true);
         fieldSlug.value = item.slug;
         fieldSlug.disabled = true;
         fieldTitle.value = item.title || '';
@@ -594,8 +743,11 @@
     document.getElementById('btn-cancel-modal').addEventListener('click', closeModal);
     fieldSlug.addEventListener('input', checkDuplicateSlug);
 
-    dropZone.addEventListener('click', () => fileInput.click());
-    fileInput.addEventListener('change', (e) => handleSelectedFile(e.target.files[0]));
+    dropZone.addEventListener('click', () => {
+        fileInput.value = '';
+        fileInput.click();
+    });
+    fileInput.addEventListener('change', (e) => handleSelectedFiles(e.target.files));
     dropZone.addEventListener('dragover', (e) => {
         e.preventDefault();
         dropZone.classList.add('drop-zone-active');
@@ -605,9 +757,78 @@
         e.preventDefault();
         dropZone.classList.remove('drop-zone-active');
         if (e.dataTransfer.files.length > 0) {
-            handleSelectedFile(e.dataTransfer.files[0]);
+            handleSelectedFiles(e.dataTransfer.files);
         }
     });
+
+    async function submitBulkUpload() {
+        const validItems = state.bulkItems.filter((item) => !item.error);
+        if (validItems.length === 0) {
+            throw new Error('アップロード可能なHTMLファイルがありません。');
+        }
+
+        const dupMode = document.querySelector('input[name="bulk-dup-mode"]:checked')?.value || 'skip';
+        const baseIso = toIsoFromDateInput(bulkDate.value || toDateInputValue(new Date().toISOString()));
+        const baseMs = new Date(baseIso).getTime();
+        const usedSlugs = new Set(state.pages.map((p) => p.slug));
+
+        let uploaded = 0;
+        let skipped = 0;
+
+        for (let i = 0; i < validItems.length; i++) {
+            const item = validItems[i];
+            btnSubmitModal.textContent = `アップロード中 (${i + 1} / ${validItems.length})...`;
+
+            let targetSlug = item.slug;
+            const exists = usedSlugs.has(targetSlug);
+
+            if (exists) {
+                if (dupMode === 'skip') {
+                    skipped++;
+                    continue;
+                }
+                if (dupMode === 'rename') {
+                    let stem = targetSlug.replace(/\.html?$/i, '');
+                    const extMatch = targetSlug.match(/(\.html?)$/i);
+                    const ext = extMatch ? extMatch[1] : '.html';
+                    let n = 2;
+                    while (usedSlugs.has(`${stem}-${n}${ext}`)) n++;
+                    targetSlug = `${stem}-${n}${ext}`;
+                }
+            }
+
+            const publishedAt = new Date(baseMs + i).toISOString();
+            const payload = {
+                slug: targetSlug,
+                title: item.title,
+                badge: item.badge,
+                description: item.description,
+                tags: item.tags,
+                html_content: item.htmlContent,
+                file_size: item.fileSize,
+                published_at: publishedAt,
+            };
+
+            const isOverwrite = exists && dupMode === 'overwrite';
+            const { error } = isOverwrite
+                ? await sb.from('math_pages').upsert(payload, { onConflict: 'slug' })
+                : await sb.from('math_pages').insert(payload);
+            if (error) {
+                throw new Error(`${item.slug}: ${error.message}`);
+            }
+
+            usedSlugs.add(targetSlug);
+            uploaded++;
+        }
+
+        closeModal();
+        await loadPages();
+        showToast(
+            skipped > 0
+                ? `${uploaded} 件アップロード完了（${skipped} 件スキップ）`
+                : `${uploaded} 件をまとめてアップロードしました`
+        );
+    }
 
     editorForm.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -616,6 +837,20 @@
         if (!state.isAllowedUploader) {
             modalError.textContent = 'アップロード権限がありません。許可されたGoogleアカウントでログインしてください。';
             modalError.classList.remove('hidden');
+            return;
+        }
+
+        if (!state.editingItem && state.bulkItems.length > 0) {
+            btnSubmitModal.disabled = true;
+            try {
+                await submitBulkUpload();
+            } catch (err) {
+                modalError.textContent = err.message || '一括アップロード中にエラーが発生しました。';
+                modalError.classList.remove('hidden');
+                renderBulkList();
+            } finally {
+                btnSubmitModal.disabled = false;
+            }
             return;
         }
 

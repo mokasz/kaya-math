@@ -846,6 +846,142 @@ button {
   border-top: 1px solid var(--surface-subtle);
 }
 
+/* ===== Bulk Upload ===== */
+.single-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.bulk-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.bulk-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.bulk-summary {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.bulk-date-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #334155;
+}
+
+.bulk-date-input {
+  width: auto;
+  padding: 0.3rem 0.55rem;
+  font-size: 0.78rem;
+}
+
+.bulk-list {
+  max-height: 14rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+}
+
+.bulk-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  padding: 0.55rem 0.75rem;
+  border-bottom: 1px solid var(--surface-subtle);
+  font-size: 0.78rem;
+}
+
+.bulk-row:last-child {
+  border-bottom: none;
+}
+
+.bulk-row-info {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.bulk-row-title {
+  font-weight: 700;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bulk-row-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+.bulk-status {
+  padding: 0.1rem 0.4rem;
+  border-radius: 0.35rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.bulk-status-new {
+  background: var(--blue-soft);
+  color: var(--blue-hover);
+}
+
+.bulk-status-dup {
+  background: var(--amber-soft);
+  color: var(--amber);
+}
+
+.bulk-status-err {
+  background: var(--red-soft);
+  color: var(--red);
+}
+
+.bulk-remove-btn {
+  border: none;
+  background: var(--surface-subtle);
+  color: var(--text-muted);
+  border-radius: 0.4rem;
+  padding: 0.2rem 0.5rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  flex-shrink: 0;
+  touch-action: manipulation;
+}
+
+@media (pointer: coarse) {
+  .bulk-remove-btn {
+    min-height: 44px;
+    padding: 0.25rem 0.75rem;
+  }
+}
+
+.bulk-remove-btn:hover {
+  background: var(--border);
+  color: var(--text);
+}
+
 /* ===== Toast ===== */
 .toast {
   position: fixed;

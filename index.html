@@ -144,57 +144,89 @@
             <form id="editor-form" class="modal-form">
                 <!-- Drop Zone -->
                 <div id="drop-zone" class="drop-zone">
-                    <input id="file-input" type="file" accept=".html,.htm,text/html" class="hidden">
+                    <input id="file-input" type="file" accept=".html,.htm,text/html" multiple class="hidden">
                     <div class="drop-zone-icon">📄</div>
-                    <p class="drop-zone-title">HTMLファイルをドラッグ＆ドロップ、またはクリックして選択</p>
-                    <p id="file-status-text" class="drop-zone-sub">最大 5MB まで（タイトルや説明を自動抽出します）</p>
+                    <p class="drop-zone-title">HTMLファイルをドラッグ＆ドロップ、またはクリックして選択（複数可）</p>
+                    <p id="file-status-text" class="drop-zone-sub">1ファイルあたり最大 5MB まで（タイトルや説明を自動抽出します）</p>
                 </div>
 
-                <!-- Duplicate Filename Warning -->
-                <div id="duplicate-notice" class="dup-notice hidden">
-                    <p>同じファイル名（<span id="duplicate-slug-label"></span>）がすでに登録されています。</p>
-                    <div class="dup-options">
-                        <label>
-                            <input type="radio" name="dup-mode" value="overwrite" checked>
-                            <span>既存を上書き更新する（日付も新しくする）</span>
-                        </label>
-                        <label>
-                            <input type="radio" name="dup-mode" value="rename">
-                            <span>別名で新規追加する</span>
+                <!-- Bulk Upload Section (2+ files) -->
+                <div id="bulk-section" class="bulk-section hidden">
+                    <div class="bulk-header">
+                        <span id="bulk-summary" class="bulk-summary"></span>
+                        <label class="bulk-date-wrap">
+                            <span>一括日付:</span>
+                            <input id="bulk-date" type="date" class="field-input bulk-date-input">
                         </label>
                     </div>
+                    <div id="bulk-dup-notice" class="dup-notice hidden">
+                        <p>すでに登録済みのファイル名が含まれています（重複時の処理）：</p>
+                        <div class="dup-options">
+                            <label>
+                                <input type="radio" name="bulk-dup-mode" value="skip" checked>
+                                <span>スキップする</span>
+                            </label>
+                            <label>
+                                <input type="radio" name="bulk-dup-mode" value="overwrite">
+                                <span>上書き更新する</span>
+                            </label>
+                            <label>
+                                <input type="radio" name="bulk-dup-mode" value="rename">
+                                <span>別名で追加する</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div id="bulk-list" class="bulk-list"></div>
                 </div>
 
-                <div class="form-grid-2">
-                    <div>
-                        <label for="field-slug" class="field-label">ファイル名（識別子）<span class="required-mark">*</span></label>
-                        <input id="field-slug" type="text" required placeholder="例: 接線の作図.html" class="field-input">
+                <!-- Single File / Edit Fields -->
+                <div id="single-fields" class="single-fields">
+                    <!-- Duplicate Filename Warning -->
+                    <div id="duplicate-notice" class="dup-notice hidden">
+                        <p>同じファイル名（<span id="duplicate-slug-label"></span>）がすでに登録されています。</p>
+                        <div class="dup-options">
+                            <label>
+                                <input type="radio" name="dup-mode" value="overwrite" checked>
+                                <span>既存を上書き更新する（日付も新しくする）</span>
+                            </label>
+                            <label>
+                                <input type="radio" name="dup-mode" value="rename">
+                                <span>別名で新規追加する</span>
+                            </label>
+                        </div>
                     </div>
-                    <div>
-                        <label for="field-date" class="field-label">日付<span class="required-mark">*</span></label>
-                        <input id="field-date" type="date" required class="field-input">
-                    </div>
-                </div>
 
-                <div class="form-grid-3">
-                    <div>
-                        <label for="field-title" class="field-label">タイトル<span class="required-mark">*</span></label>
-                        <input id="field-title" type="text" required placeholder="例: 円周上の1点を通る接線の作図" class="field-input">
+                    <div class="form-grid-2">
+                        <div>
+                            <label for="field-slug" class="field-label">ファイル名（識別子）<span class="required-mark">*</span></label>
+                            <input id="field-slug" type="text" required placeholder="例: 接線の作図.html" class="field-input">
+                        </div>
+                        <div>
+                            <label for="field-date" class="field-label">日付<span class="required-mark">*</span></label>
+                            <input id="field-date" type="date" required class="field-input">
+                        </div>
                     </div>
-                    <div>
-                        <label for="field-badge" class="field-label">ラベル（任意）</label>
-                        <input id="field-badge" type="text" placeholder="例: 作図プリント No.1" class="field-input">
+
+                    <div class="form-grid-3">
+                        <div>
+                            <label for="field-title" class="field-label">タイトル<span class="required-mark">*</span></label>
+                            <input id="field-title" type="text" required placeholder="例: 円周上の1点を通る接線の作図" class="field-input">
+                        </div>
+                        <div>
+                            <label for="field-badge" class="field-label">ラベル（任意）</label>
+                            <input id="field-badge" type="text" placeholder="例: 作図プリント No.1" class="field-input">
+                        </div>
                     </div>
-                </div>
 
-                <div>
-                    <label for="field-tags" class="field-label">タグ（カンマ区切り）</label>
-                    <input id="field-tags" type="text" placeholder="例: 作図, 空間図形, ステップ解説" class="field-input">
-                </div>
+                    <div>
+                        <label for="field-tags" class="field-label">タグ（カンマ区切り）</label>
+                        <input id="field-tags" type="text" placeholder="例: 作図, 空間図形, ステップ解説" class="field-input">
+                    </div>
 
-                <div>
-                    <label for="field-desc" class="field-label">説明（任意）</label>
-                    <textarea id="field-desc" rows="2" placeholder="内容のメモ（自動抽出されます）" class="field-input"></textarea>
+                    <div>
+                        <label for="field-desc" class="field-label">説明（任意）</label>
+                        <textarea id="field-desc" rows="2" placeholder="内容のメモ（自動抽出されます）" class="field-input"></textarea>
+                    </div>
                 </div>
 
                 <div id="modal-error" class="modal-error hidden"></div>
